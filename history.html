@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7f9" />
+  <title>歷史清點紀錄</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f6f8;--card:#fff;--text:#15171a;--muted:#7b8189;--line:#e7e9ee;
+      --primary:#2f6fe4;--primary-soft:#eef4ff;--danger:#d1242f;
+      --shadow:0 8px 24px rgba(17,24,39,.055);--shadow-soft:0 3px 12px rgba(17,24,39,.04);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:linear-gradient(180deg,#f8fafc 0,#f4f6f8 180px);color:var(--text);-webkit-font-smoothing:antialiased}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:760px;margin:auto;padding:18px 14px 110px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h1{font-size:24px;letter-spacing:-.4px;margin:0 0 5px}
+    .sub{font-size:13px;color:var(--muted)}
+    .back-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 10px;color:var(--primary);font-size:13px;font-weight:750;box-shadow:var(--shadow-soft)}
+    .filter-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:14px;box-shadow:var(--shadow);margin-bottom:13px}
+    .filter-title{font-size:13px;font-weight:800;margin-bottom:9px}
+    .filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    select{width:100%;border:1px solid #d9dce1;border-radius:12px;padding:11px;background:#fff;outline:none}
+    select:focus{border-color:#b8c8ee;box-shadow:0 0 0 3px rgba(47,111,228,.07)}
+    .month-summary{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 1px 12px}
+    .month-title{font-size:14px;font-weight:850}
+    .month-meta{font-size:12px;color:var(--muted)}
+    .day-card{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow);overflow:hidden;margin:13px 0}
+    .day-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(180deg,#fff,#fafbfc);border-bottom:1px solid var(--line)}
+    .day-date{font-size:16px;font-weight:850}
+    .day-count{font-size:11px;color:var(--muted)}
+    .category-block + .category-block{border-top:1px solid var(--line)}
+    .category-title{padding:9px 14px 7px;font-size:12px;font-weight:850;color:#5b6370;background:#fbfcfd}
+    .row{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid #f0f1f3}
+    .row:first-child{border-top:0}
+    .item-name{font-size:13px;font-weight:680;overflow-wrap:anywhere}
+    .qty{text-align:right;font-size:15px;font-weight:820}
+    .note{font-size:10px;color:var(--muted);margin-top:2px}
+    .empty-state{padding:32px 16px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:17px}
+    .loading{padding:32px;text-align:center;color:var(--muted)}
+    .export-wrap{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(244,246,248,.92);backdrop-filter:blur(12px);border-top:1px solid rgba(231,233,238,.9)}
+    .export-inner{max-width:760px;margin:auto}
+    .export-btn{width:100%;border:0;border-radius:14px;padding:13px 14px;background:var(--primary);color:#fff;font-weight:820;box-shadow:0 7px 16px rgba(47,111,228,.20)}
+    .export-btn:disabled{opacity:.5}
+    @media (max-width:420px){
+      h1{font-size:22px}
+      .row{grid-template-columns:minmax(0,1fr) 72px}
+    }
+  
+    .history-category{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:17px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      margin:13px 0;
+    }
+    .history-category-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px 14px;
+      font-size:15px;
+      font-weight:850;
+      background:linear-gradient(180deg,#fff,#fafbfc);
+      border-bottom:1px solid var(--line);
+    }
+    .table-scroll{
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    .history-table{
+      border-collapse:separate;
+      border-spacing:0;
+      width:max-content;
+      min-width:100%;
+      table-layout:fixed;
+    }
+    .history-table th,
+    .history-table td{
+      border-bottom:1px solid var(--line);
+      border-right:1px solid #f0f1f3;
+      padding:10px 8px;
+      text-align:center;
+      font-size:12px;
+      min-width:74px;
+      background:#fff;
+      white-space:nowrap;
+    }
+    .history-table th{
+      background:#fafbfc;
+      color:#555f6b;
+      font-weight:800;
+    }
+    .history-table tr:last-child td{border-bottom:0}
+    .history-table th:last-child,
+    .history-table td:last-child{border-right:0}
+    .history-table .sticky-col{
+      position:sticky;
+      left:0;
+      z-index:2;
+      min-width:150px;
+      max-width:150px;
+      text-align:left;
+      background:#fff;
+      box-shadow:1px 0 0 var(--line);
+      white-space:normal;
+      overflow-wrap:anywhere;
+    }
+    .history-table th.sticky-col{
+      z-index:3;
+      background:#fafbfc;
+    }
+    .history-table .qty{
+      font-size:13px;
+      font-weight:800;
+      text-align:center;
+    }
+    .history-table .note{
+      display:block;
+      margin-top:3px;
+      font-size:9px;
+      color:var(--muted);
+      max-width:72px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .scroll-hint{
+      font-size:11px;
+      color:var(--muted);
+      margin:-3px 1px 10px;
+    }
+
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="top">
+      <div>
+        <h1>歷史清點紀錄</h1>
+        <div class="sub">依月份查看完整清點紀錄</div>
+      </div>
+      <button class="back-btn" id="backBtn">返回首頁</button>
+    </div>
+
+    <section class="filter-card">
+      <div class="filter-title">選擇月份</div>
+      <div class="filter-grid">
+        <select id="yearSelect"></select>
+        <select id="monthSelect"></select>
+      </div>
+    </section>
+
+    <div class="month-summary">
+      <div class="month-title" id="monthTitle">—</div>
+      <div class="month-meta" id="monthMeta">載入中…</div>
+    </div>
+
+    <div id="content" class="loading">正在讀取歷史紀錄…</div>
+  </main>
+
+  <div class="export-wrap">
+    <div class="export-inner">
+      <button class="export-btn" id="exportBtn" disabled>匯出 Excel</button>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = "https://jtbmeajtjrxxqhtubtnq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_v0eeDGfyBeiO8khjE3jdUQ_HnfPY7Hd";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let categories = [];
+let items = [];
+let monthRecords = [];
+
+const $ = (id) => document.getElementById(id);
+
+function esc(v="") {
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function pad2(n){ return String(n).padStart(2,"0"); }
+function monthBounds(year, month) {
+  const start = `${year}-${pad2(month)}-01`;
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const endExclusive = `${nextYear}-${pad2(nextMonth)}-01`;
+  return {start, endExclusive};
+}
+function displayDate(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  return `${m}/${d}`;
+}
+function weekday(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  return ["日","一","二","三","四","五","六"][new Date(y,m-1,d).getDay()];
+}
+
+function initSelectors() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const yearSelect = $("yearSelect");
+  const monthSelect = $("monthSelect");
+
+  for (let y = currentYear; y >= currentYear - 5; y--) {
+    yearSelect.insertAdjacentHTML("beforeend", `<option value="${y}">${y} 年</option>`);
+  }
+  for (let m = 1; m <= 12; m++) {
+    monthSelect.insertAdjacentHTML("beforeend", `<option value="${m}">${m} 月</option>`);
+  }
+
+  yearSelect.value = String(currentYear);
+  monthSelect.value = String(now.getMonth() + 1);
+}
+
+async function loadBaseData() {
+  const [catRes, itemRes] = await Promise.all([
+    sb.from("categories").select("id,name,sort_order").order("sort_order",{ascending:true}).order("id",{ascending:true}),
+    sb.from("items").select("id,name,category_id,sort_order").order("sort_order",{ascending:true}).order("id",{ascending:true})
+  ]);
+
+  const error = catRes.error || itemRes.error;
+  if (error) throw error;
+
+  categories = catRes.data || [];
+  items = itemRes.data || [];
+}
+
+async function loadMonth() {
+  const year = Number($("yearSelect").value);
+  const month = Number($("monthSelect").value);
+  const {start, endExclusive} = monthBounds(year, month);
+
+  $("content").innerHTML = '<div class="loading">正在讀取歷史紀錄…</div>';
+  $("exportBtn").disabled = true;
+  $("monthTitle").textContent = `${year} 年 ${month} 月`;
+
+  const {data, error} = await sb
+    .from("inventory_records")
+    .select("id,item_id,record_date,quantity,note,created_at")
+    .gte("record_date", start)
+    .lt("record_date", endExclusive)
+    .order("record_date",{ascending:false})
+    .order("item_id",{ascending:true});
+
+  if (error) {
+    $("content").innerHTML = `<div class="empty-state">讀取失敗：${esc(error.message)}</div>`;
+    $("monthMeta").textContent = "讀取失敗";
+    return;
+  }
+
+  monthRecords = data || [];
+  renderMonth(year, month);
+}
+
+function renderMonth(year, month) {
+  if (!monthRecords.length) {
+    $("content").innerHTML = '<div class="empty-state">這個月份目前沒有清點紀錄。</div>';
+    $("monthMeta").textContent = "0 個清點日";
+    $("exportBtn").disabled = true;
+    return;
+  }
+
+  const dates = [...new Set(monthRecords.map(r => r.record_date))]
+    .sort((a,b) => a.localeCompare(b));
+
+  $("monthMeta").textContent = `${dates.length} 個清點日 · ${monthRecords.length} 筆紀錄`;
+  $("exportBtn").disabled = false;
+
+  const recordMap = new Map(
+    monthRecords.map(r => [`${r.item_id}|${r.record_date}`, r])
+  );
+
+  let html = '<div class="scroll-hint">左右滑動可查看整個月份的清點紀錄</div>';
+
+  for (const c of categories) {
+    const catItems = items.filter(i => i.category_id === c.id);
+
+    // 只顯示這個月有任何紀錄的品項
+    const visibleItems = catItems.filter(item =>
+      dates.some(date => recordMap.has(`${item.id}|${date}`))
+    );
+
+    if (!visibleItems.length) continue;
+
+    html += `<section class="history-category">
+      <div class="history-category-title">
+        <span>${esc(c.name)}</span>
+        <span class="sub">${visibleItems.length} 項</span>
+      </div>
+
+      <div class="table-scroll">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th class="sticky-col">品項</th>
+              ${dates.map(date => `<th>${displayDate(date)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>`;
+
+    for (const item of visibleItems) {
+      html += `<tr>
+        <td class="sticky-col"><span class="item-name">${esc(item.name)}</span></td>`;
+
+      for (const date of dates) {
+        const r = recordMap.get(`${item.id}|${date}`);
+
+        if (!r) {
+          html += `<td><span style="color:#aaa;">—</span></td>`;
+          continue;
+        }
+
+        html += `<td>
+          <div class="qty">${r.quantity === null ? "—" : esc(r.quantity)}</div>
+          ${r.note ? `<span class="note" title="${esc(r.note)}">${esc(r.note)}</span>` : ""}
+        </td>`;
+      }
+
+      html += `</tr>`;
+    }
+
+    html += `</tbody>
+        </table>
+      </div>
+    </section>`;
+  }
+
+  $("content").innerHTML = html;
+}
+function exportExcel() {
+  if (!monthRecords.length) return;
+
+  const year = Number($("yearSelect").value);
+  const month = Number($("monthSelect").value);
+  const catMap = new Map(categories.map(c => [c.id, c]));
+  const itemMap = new Map(items.map(i => [i.id, i]));
+
+  const sorted = [...monthRecords].sort((a, b) => {
+    const d = a.record_date.localeCompare(b.record_date);
+    if (d !== 0) return d;
+
+    const ia = itemMap.get(a.item_id);
+    const ib = itemMap.get(b.item_id);
+
+    const ca = ia ? catMap.get(ia.category_id) : null;
+    const cb = ib ? catMap.get(ib.category_id) : null;
+
+    const categoryDiff = (ca?.sort_order ?? 999999) - (cb?.sort_order ?? 999999);
+    if (categoryDiff !== 0) return categoryDiff;
+
+    return (ia?.sort_order ?? 999999) - (ib?.sort_order ?? 999999);
+  });
+
+  const data = sorted.map(r => {
+    const item = itemMap.get(r.item_id);
+    const category = item ? catMap.get(item.category_id) : null;
+
+    return {
+      "清點日期": r.record_date,
+      "類別": category?.name ?? "",
+      "品項": item?.name ?? `品項 #${r.item_id}`,
+      "數量": r.quantity ?? "",
+      "備註": r.note ?? ""
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  worksheet["!cols"] = [
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 28 },
+    { wch: 12 },
+    { wch: 28 }
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, `${year}-${pad2(month)}`);
+
+  XLSX.writeFile(
+    workbook,
+    `庫存清點_${year}-${pad2(month)}.xlsx`
+  );
+}
+
+$("backBtn").addEventListener("click", () => { window.location.href = "index.html"; });
+$("yearSelect").addEventListener("change", loadMonth);
+$("monthSelect").addEventListener("change", loadMonth);
+$("exportBtn").addEventListener("click", exportExcel);
+
+(async function init(){
+  try{
+    initSelectors();
+    await loadBaseData();
+    await loadMonth();
+  }catch(error){
+    $("content").innerHTML = `<div class="empty-state">載入失敗：${esc(error.message)}</div>`;
+    $("monthMeta").textContent = "載入失敗";
+  }
+})();
+</script>
+</body>
+</html>

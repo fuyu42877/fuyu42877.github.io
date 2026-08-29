@@ -12,22 +12,35 @@
       --primary:#1f6feb;--danger:#d1242f;--soft:#eef4ff;--shadow:0 8px 26px rgba(0,0,0,.06);
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text)}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:linear-gradient(180deg,#f8fafc 0,#f4f6f8 180px);color:var(--text);-webkit-font-smoothing:antialiased}
     button,input,select,textarea{font:inherit}
     button{cursor:pointer}
-    .app{max-width:760px;margin:auto;padding:18px 14px 90px}
-    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
-    h1{font-size:24px;margin:0 0 5px}
+    .app{max-width:760px;margin:auto;padding:18px 14px 96px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h1{font-size:25px;letter-spacing:-.4px;margin:0 0 5px}
     .sub{font-size:13px;color:var(--muted)}
     .icon-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}
+    
+    .dashboard{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 12px}
+    .dashboard-card{border:1px solid var(--line);background:rgba(255,255,255,.95);border-radius:16px;padding:14px;text-align:left;box-shadow:var(--shadow);min-height:102px;transition:.15s}
+    .dashboard-label{font-size:12px;font-weight:750;color:var(--muted);margin-bottom:7px}
+    .dashboard-value{font-size:25px;line-height:1;font-weight:850;letter-spacing:-.5px;color:var(--text)}
+    .dashboard-sub{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.35}
+    .dashboard-card.alert .dashboard-value{color:var(--danger)}
+    .dashboard-card.alert{border-color:#f0c7ca;background:linear-gradient(180deg,#fff 0,var(--danger-soft) 100%)}
+    .dashboard-card.done .dashboard-value{color:var(--success)}
+    .dashboard-card.done{border-color:#cce8d7;background:linear-gradient(180deg,#fff 0,var(--success-soft) 100%)}
+    .dashboard-arrow{float:right;font-size:12px;color:var(--muted);font-weight:700}
+
     .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
     .actions .primary{grid-column:1 / -1}
-    .btn{border:0;border-radius:12px;padding:12px 10px;font-weight:700;background:#fff;box-shadow:0 1px 0 var(--line)}
-    .btn.primary{background:var(--primary);color:#fff}
+    .btn{border:0;border-radius:13px;padding:12px 10px;font-weight:750;background:#fff;box-shadow:var(--shadow-soft);transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
+    .btn.primary{background:var(--primary);color:#fff;box-shadow:0 7px 16px rgba(47,111,228,.20)}
     .btn.danger{background:var(--danger);color:#fff}
-    .btn.secondary{border:1px solid var(--line)}
-    .btn.delete-text{border:1px solid var(--line);color:#d1242f;background:#fff}
-    .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;margin-bottom:12px}
+    .btn.secondary{border:1px solid var(--line);color:#3f4650}
+    .btn.delete-text{border:1px solid var(--line);color:var(--danger);background:#fff}
+    .btn:active,.icon-btn:active,.history-btn:active,.dashboard-card:active{transform:scale(.985)}
+    .search-wrap{position:relative;margin-bottom:12px}.search{width:100%;padding:12px 42px 12px 38px;border:1px solid var(--line);border-radius:14px;background:#fff;outline:none;box-shadow:var(--shadow-soft);margin:0}.search:focus{border-color:#b8c8ee;box-shadow:0 0 0 3px rgba(47,111,228,.08)}.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.55}.search-clear{position:absolute;right:9px;top:50%;transform:translateY(-50%);border:0;background:#eef0f3;border-radius:50%;width:28px;height:28px;color:#666;display:none}
     .warning-overview{width:100%;border:1px solid #f0c7ca;background:#fff;border-radius:13px;padding:12px 14px;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left}
     .warning-overview .warning-main{font-weight:800;color:#b4232c}
     .warning-overview .warning-date{font-size:11px;color:var(--muted);margin-top:2px}
@@ -35,10 +48,10 @@
     .warning-overview.zero{border-color:var(--line)}
     .warning-overview.zero .warning-main,.warning-overview.zero .warning-action{color:#666}
     .warning-overview.active{background:#fff4f4;border-color:#dc8086}
-    .category{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin:12px 0}
-    .category-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:16px;font-weight:800;border-bottom:1px solid var(--line)}
+    .category{background:var(--card);border:1px solid rgba(231,233,238,.85);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin:13px 0}
+    .category-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:16px;font-weight:850;background:linear-gradient(180deg,#fff,#fafbfc);border-bottom:1px solid var(--line)}
     table{width:100%;border-collapse:collapse;table-layout:fixed}
-    th,td{border-bottom:1px solid var(--line);padding:10px 4px;text-align:center;font-size:13px;vertical-align:middle}
+    th,td{border-bottom:1px solid var(--line);padding:11px 4px;text-align:center;font-size:13px;vertical-align:middle}
     th{background:#fafafa;font-weight:700;color:#555}
     th:first-child,td:first-child{width:43%;text-align:left;padding-left:12px;padding-right:6px}
     th:not(:first-child),td:not(:first-child){width:19%}
@@ -49,33 +62,34 @@
     .item-name{font-weight:650;line-height:1.25;overflow-wrap:anywhere}
     .item-name-btn{border:0;background:transparent;padding:4px 0;text-align:left;font-weight:700;color:inherit;width:100%;overflow-wrap:anywhere}
     .note{display:block;font-size:9px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .latest-head{font-size:15px!important;font-weight:850!important;color:#222!important;background:#f4f7fd!important}
-    .latest-cell{background:#fbfcff}
+    .latest-head{font-size:15px!important;font-weight:850!important;color:#1d315e!important;background:var(--primary-soft)!important}
+    .latest-cell{background:#f9fbff}
     .latest-cell .cell-btn{font-size:16px;font-weight:800;color:#222}
-    .latest-cell .cell-btn.low-stock{color:#d1242f;font-weight:850}
+    .latest-cell .cell-btn.low-stock{color:var(--danger);font-weight:850}
+    .low-tag{display:block;width:max-content;margin:3px auto 0;padding:2px 5px;border-radius:999px;background:var(--danger-soft);color:var(--danger);font-size:8px;font-weight:800;line-height:1.1}
     .latest-cell .note{font-size:9px;font-weight:500}
 
     .empty-state{padding:28px 16px;text-align:center;color:var(--muted);background:#fff;border-radius:16px}
     .loading{padding:28px;text-align:center;color:var(--muted)}
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);display:none;align-items:flex-end;justify-content:center;z-index:50}
     .modal-backdrop.show{display:flex}
-    .modal{background:#fff;width:min(760px,100%);border-radius:20px 20px 0 0;max-height:88vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+    .modal{background:#fff;width:min(760px,100%);border-radius:22px 22px 0 0;max-height:90vh;overflow:auto;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -12px 36px rgba(0,0,0,.12);animation:sheetUp .18s ease-out}@keyframes sheetUp{from{transform:translateY(18px);opacity:.65}to{transform:translateY(0);opacity:1}}
     .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
     .modal h2{font-size:20px;margin:0}
     .close{border:0;background:#f1f1f1;border-radius:50%;width:34px;height:34px}
     label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
-    input,select,textarea{width:100%;border:1px solid #d9dce1;border-radius:11px;padding:12px;background:#fff;outline:none}
+    input,select,textarea{width:100%;border:1px solid #d9dce1;border-radius:12px;padding:12px;background:#fff;outline:none}input:focus,select:focus,textarea:focus{border-color:#b8c8ee;box-shadow:0 0 0 3px rgba(47,111,228,.07)}
     textarea{resize:vertical;min-height:72px}
     .modal-actions{display:flex;gap:9px;margin-top:18px}
     .modal-actions .btn{flex:1}
     .count-list{display:flex;flex-direction:column;gap:10px}
-    .count-row{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:10px;align-items:center;padding:10px;background:#f8f9fb;border-radius:12px}
+    .count-row{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:10px;align-items:center;padding:11px;background:#f8f9fb;border:1px solid #eef0f3;border-radius:13px}
     .count-row input{padding:10px;text-align:center}
     .count-cat{font-size:12px;color:var(--muted)}
     .already{font-size:12px;color:var(--muted)}
     .date-box{background:#f8f9fb;border-radius:14px;padding:12px;margin-bottom:12px}
     .date-box label{margin-top:0}
-    .progress-box{background:#f8f9fb;border-radius:14px;padding:12px;margin-bottom:12px}
+    .progress-box{position:sticky;top:-1px;z-index:3;background:rgba(248,249,251,.96);backdrop-filter:blur(8px);border:1px solid #eceef2;border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 5px 14px rgba(17,24,39,.045)}
     .progress-line{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .progress-title{font-size:14px;font-weight:800}
     .progress-count{font-size:14px;font-weight:800;color:var(--primary)}
@@ -112,7 +126,10 @@
         <h1>庫存清點紀錄</h1>
         <div class="sub" id="lastUpdated">載入中…</div>
       </div>
-      <button class="icon-btn" id="refreshBtn">重新整理</button>
+      <div class="top-actions">
+        <button class="history-btn" id="historyBtn">歷史紀錄</button>
+        <button class="icon-btn" id="refreshBtn">重新整理</button>
+      </div>
     </div>
 
     <div class="actions">
@@ -122,15 +139,27 @@
       <button class="btn secondary" id="sortBtn">排序</button>
     </div>
 
-    <button class="warning-overview zero" id="warningOverview" type="button">
-      <div>
-        <div class="warning-main" id="warningOverviewText">預警品項 0 項</div>
-        <div class="warning-date" id="warningOverviewDate">等待清點資料</div>
-      </div>
-      <div class="warning-action" id="warningOverviewAction">只看預警</div>
-    </button>
+    <div class="dashboard">
+      <button class="dashboard-card" id="todayCard" type="button">
+        <span class="dashboard-arrow">前往 ›</span>
+        <div class="dashboard-label">今日清點</div>
+        <div class="dashboard-value" id="todayProgressValue">0 / 0</div>
+        <div class="dashboard-sub" id="todayProgressSub">尚未開始清點</div>
+      </button>
 
-    <input class="search" id="searchInput" placeholder="搜尋品項…" autocomplete="off" />
+      <button class="dashboard-card" id="lowStockCard" type="button">
+        <span class="dashboard-arrow" id="lowStockArrow">查看 ›</span>
+        <div class="dashboard-label">低庫存預警</div>
+        <div class="dashboard-value" id="lowStockValue">0 項</div>
+        <div class="dashboard-sub" id="lowStockSub">依最新一次清點判斷</div>
+      </button>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search" id="searchInput" placeholder="搜尋品項" autocomplete="off" />
+      <button class="search-clear" id="searchClearBtn" type="button">×</button>
+    </div>
     <div id="content" class="loading">正在讀取庫存資料…</div>
   </main>
 
@@ -244,8 +273,8 @@ async function loadAll(showLoading = true) {
 
   render();
   $("lastUpdated").textContent = dateKeys.length
-    ? `最近 ${dateKeys.length} 次清點｜最後更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`
-    : `尚無清點紀錄｜最後更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
+    ? `最近 ${dateKeys.length} 次清點 · 更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`
+    : `尚無清點紀錄 · 更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
 }
 
 function getLatestLowStockItemIds() {
@@ -277,19 +306,37 @@ function getLatestLowStockItemIds() {
   return ids;
 }
 
-function updateWarningOverview() {
+function updateDashboard() {
+  const today = localISODate();
+  const todayDone = new Set(
+    records
+      .filter(r => r.record_date === today && r.quantity !== null)
+      .map(r => r.item_id)
+  ).size;
+
+  const total = items.length;
+  const todayCard = $("todayCard");
+  $("todayProgressValue").textContent = `${todayDone} / ${total}`;
+  $("todayProgressSub").textContent =
+    total > 0 && todayDone === total
+      ? "今日清點完成"
+      : todayDone > 0
+        ? `尚有 ${Math.max(total - todayDone, 0)} 項未填`
+        : "尚未開始清點";
+
+  todayCard.classList.toggle("done", total > 0 && todayDone === total);
+
   const latestDate = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
   const lowIds = getLatestLowStockItemIds();
-  const box = $("warningOverview");
+  const lowCard = $("lowStockCard");
 
-  $("warningOverviewText").textContent = `預警品項 ${lowIds.size} 項`;
-  $("warningOverviewDate").textContent = latestDate
-    ? `依最新一次清點 ${labelDate(latestDate)} 判斷`
+  $("lowStockValue").textContent = `${lowIds.size} 項`;
+  $("lowStockSub").textContent = latestDate
+    ? `依 ${labelDate(latestDate)} 清點結果`
     : "目前尚無清點紀錄";
-  $("warningOverviewAction").textContent = lowStockOnly ? "顯示全部" : "只看預警";
+  $("lowStockArrow").textContent = lowStockOnly ? "顯示全部 ›" : "查看 ›";
 
-  box.classList.toggle("zero", lowIds.size === 0);
-  box.classList.toggle("active", lowStockOnly);
+  lowCard.classList.toggle("alert", lowIds.size > 0);
 }
 
 function render() {
@@ -302,7 +349,7 @@ function render() {
     matchedItems = matchedItems.filter(i => lowIds.has(i.id));
   }
 
-  updateWarningOverview();
+  updateDashboard();
 
   if (!categories.length) {
     $("content").innerHTML = '<div class="empty-state">尚未建立類別。請先點「新增類別」。</div>';
@@ -348,7 +395,7 @@ function render() {
           const note = r.note ? `<span class="note">${esc(r.note)}</span>` : "";
           const isLowStock = d === latestDate && lowIds.has(item.id);
 
-          html += `<td class="${latestClass}"><button class="cell-btn has ${isLowStock ? "low-stock" : ""}" onclick="openEditRecord(${r.id})">${qty}${note}</button></td>`;
+          html += `<td class="${latestClass}"><button class="cell-btn has ${isLowStock ? "low-stock" : ""}" onclick="openEditRecord(${r.id})">${qty}${isLowStock ? '<span class="low-tag">低庫存</span>' : ''}${note}</button></td>`;
         } else {
           html += `<td class="${latestClass}"><span class="empty">—</span></td>`;
         }
@@ -829,37 +876,22 @@ async function submitEditRecord(recordId) {
   closeModal(); toast("紀錄修改成功"); await loadAll(false);
 }
 
-function openDeleteItem(itemId) {
-  const item = items.find(i => i.id === itemId);
-  if (!item) return;
-  showModal(`${modalHeader("刪除品項")}
-    <p>確定要刪除「<strong>${esc(item.name)}</strong>」嗎？</p>
-    <div class="hint">若這個品項已經有歷史清點紀錄，系統會拒絕刪除，以免破壞舊資料。</div>
-    <label>管理密碼</label>
-    <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
-    <div class="modal-actions">
-      <button class="btn secondary" onclick="closeModal()">取消</button>
-      <button class="btn danger" onclick="submitDeleteItem(${item.id})">確認刪除</button>
-    </div>`);
-}
-
-async function submitDeleteItem(itemId) {
-  const password = $("adminPassword").value;
-  if (!password) return toast("請輸入管理密碼");
-  const { data, error } = await sb.functions.invoke("admin-delete-item", {
-    body: { password, itemId }
-  });
-  if (error) return toast("刪除失敗：" + error.message);
-  if (!data?.success) return toast(data?.message || "刪除失敗");
-  closeModal(); toast("品項已刪除"); await loadAll(false);
-}
-
+$("historyBtn").addEventListener("click", () => { window.location.href = "history.html"; });
 $("refreshBtn").addEventListener("click", () => loadAll());
-$("warningOverview").addEventListener("click", () => {
+$("todayCard").addEventListener("click", openDailyCount);
+$("lowStockCard").addEventListener("click", () => {
   lowStockOnly = !lowStockOnly;
   render();
 });
-$("searchInput").addEventListener("input", render);
+$("searchInput").addEventListener("input", () => {
+  $("searchClearBtn").style.display = $("searchInput").value ? "block" : "none";
+  render();
+});
+$("searchClearBtn").addEventListener("click", () => {
+  $("searchInput").value = "";
+  $("searchClearBtn").style.display = "none";
+  render();
+});
 $("dailyBtn").addEventListener("click", openDailyCount);
 $("addCategoryBtn").addEventListener("click", openAddCategory);
 $("addItemBtn").addEventListener("click", openAddItem);
