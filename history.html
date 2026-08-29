@@ -340,56 +340,109 @@ function exportExcel() {
 
   const year = Number($("yearSelect").value);
   const month = Number($("monthSelect").value);
-  const catMap = new Map(categories.map(c => [c.id, c]));
-  const itemMap = new Map(items.map(i => [i.id, i]));
 
-  const sorted = [...monthRecords].sort((a, b) => {
-    const d = a.record_date.localeCompare(b.record_date);
-    if (d !== 0) return d;
+  const dates = [...new Set(monthRecords.map(r => r.record_date))]
+    .sort((a, b) => a.localeCompare(b));
 
-    const ia = itemMap.get(a.item_id);
-    const ib = itemMap.get(b.item_id);
+  const recordMap = new Map(
+    monthRecords.map(r => [`${r.item_id}|${r.record_date}`, r])
+  );
 
-    const ca = ia ? catMap.get(ia.category_id) : null;
-    const cb = ib ? catMap.get(ib.category_id) : null;
+  const rows = [];
+  const merges = [];
+  const totalCols = Math.max(1, dates.length + 1);
 
-    const categoryDiff = (ca?.sort_order ?? 999999) - (cb?.sort_order ?? 999999);
-    if (categoryDiff !== 0) return categoryDiff;
-
-    return (ia?.sort_order ?? 999999) - (ib?.sort_order ?? 999999);
+  // 標題
+  rows.push([`庫存清點紀錄｜${year} 年 ${month} 月`]);
+  merges.push({
+    s: { r: 0, c: 0 },
+    e: { r: 0, c: totalCols - 1 }
   });
+  rows.push([]);
 
-  const data = sorted.map(r => {
-    const item = itemMap.get(r.item_id);
-    const category = item ? catMap.get(item.category_id) : null;
+  for (const category of categories) {
+    const catItems = items.filter(item => item.category_id === category.id);
 
-    return {
-      "清點日期": r.record_date,
-      "類別": category?.name ?? "",
-      "品項": item?.name ?? `品項 #${r.item_id}`,
-      "數量": r.quantity ?? "",
-      "備註": r.note ?? ""
-    };
-  });
+    // 只匯出本月有紀錄的品項
+    const visibleItems = catItems.filter(item =>
+      dates.some(date => recordMap.has(`${item.id}|${date}`))
+    );
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
+    if (!visibleItems.length) continue;
 
+    // 類別標題列
+    const categoryRowIndex = rows.length;
+    rows.push([`${category.name}｜${visibleItems.length} 項`]);
+
+    merges.push({
+      s: { r: categoryRowIndex, c: 0 },
+      e: { r: categoryRowIndex, c: totalCols - 1 }
+    });
+
+    // 跟網頁相同：第一欄品項，後面都是日期
+    rows.push([
+      "品項",
+      ...dates.map(date => displayDate(date))
+    ]);
+
+    for (const item of visibleItems) {
+      const row = [item.name];
+
+      for (const date of dates) {
+        const record = recordMap.get(`${item.id}|${date}`);
+
+        if (!record) {
+          row.push("");
+          continue;
+        }
+
+        // 若有備註，跟網頁一樣放在同一格數量下面的概念
+        if (record.note) {
+          row.push(
+            `${record.quantity === null ? "—" : record.quantity}\n${record.note}`
+          );
+        } else {
+          row.push(record.quantity === null ? "—" : record.quantity);
+        }
+      }
+
+      rows.push(row);
+    }
+
+    // 類別之間留一空列
+    rows.push([]);
+  }
+
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+
+  worksheet["!merges"] = merges;
+
+  // 第一欄寬一點，日期欄一致
   worksheet["!cols"] = [
-    { wch: 14 },
-    { wch: 18 },
     { wch: 28 },
-    { wch: 12 },
-    { wch: 28 }
+    ...dates.map(() => ({ wch: 11 }))
   ];
 
+  // 標題/類別列稍高，含備註的儲存格也比較好閱讀
+  worksheet["!rows"] = rows.map((row, index) => {
+    if (index === 0) return { hpt: 24 };
+    if (row.length === 1 && row[0]) return { hpt: 21 };
+    return { hpt: 19 };
+  });
+
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, `${year}-${pad2(month)}`);
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    `${year}-${pad2(month)}`
+  );
 
   XLSX.writeFile(
     workbook,
     `庫存清點_${year}-${pad2(month)}.xlsx`
   );
 }
+
 
 $("backBtn").addEventListener("click", () => { window.location.href = "index.html"; });
 $("yearSelect").addEventListener("change", loadMonth);
