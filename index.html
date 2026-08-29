@@ -20,7 +20,7 @@
     h1{font-size:24px;margin:0 0 5px}
     .sub{font-size:13px;color:var(--muted)}
     .icon-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}
-    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+    .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
     .actions .primary{grid-column:1 / -1}
     .btn{border:0;border-radius:12px;padding:12px 10px;font-weight:700;background:#fff;box-shadow:0 1px 0 var(--line)}
     .btn.primary{background:var(--primary);color:#fff}
@@ -28,6 +28,13 @@
     .btn.secondary{border:1px solid var(--line)}
     .btn.delete-text{border:1px solid var(--line);color:#d1242f;background:#fff}
     .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;margin-bottom:12px}
+    .warning-overview{width:100%;border:1px solid #f0c7ca;background:#fff;border-radius:13px;padding:12px 14px;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left}
+    .warning-overview .warning-main{font-weight:800;color:#b4232c}
+    .warning-overview .warning-date{font-size:11px;color:var(--muted);margin-top:2px}
+    .warning-overview .warning-action{font-size:12px;color:#b4232c;white-space:nowrap}
+    .warning-overview.zero{border-color:var(--line)}
+    .warning-overview.zero .warning-main,.warning-overview.zero .warning-action{color:#666}
+    .warning-overview.active{background:#fff4f4;border-color:#dc8086}
     .category{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin:12px 0}
     .category-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:16px;font-weight:800;border-bottom:1px solid var(--line)}
     table{width:100%;border-collapse:collapse;table-layout:fixed}
@@ -45,6 +52,7 @@
     .latest-head{font-size:15px!important;font-weight:850!important;color:#222!important;background:#f4f7fd!important}
     .latest-cell{background:#fbfcff}
     .latest-cell .cell-btn{font-size:16px;font-weight:800;color:#222}
+    .latest-cell .cell-btn.low-stock{color:#d1242f;font-weight:850}
     .latest-cell .note{font-size:9px;font-weight:500}
 
     .empty-state{padding:28px 16px;text-align:center;color:var(--muted);background:#fff;border-radius:16px}
@@ -67,12 +75,28 @@
     .already{font-size:12px;color:var(--muted)}
     .date-box{background:#f8f9fb;border-radius:14px;padding:12px;margin-bottom:12px}
     .date-box label{margin-top:0}
+    .progress-box{background:#f8f9fb;border-radius:14px;padding:12px;margin-bottom:12px}
+    .progress-line{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .progress-title{font-size:14px;font-weight:800}
+    .progress-count{font-size:14px;font-weight:800;color:var(--primary)}
+    .progress-track{height:7px;background:#e7e9ed;border-radius:999px;overflow:hidden;margin-top:9px}
+    .progress-fill{height:100%;width:0;background:var(--primary);border-radius:999px;transition:width .15s ease}
+    .progress-box.complete .progress-count{color:#18864b}
     .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#202124;color:#fff;padding:11px 15px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:90%;text-align:center}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:7px}
     .section-label{font-size:12px;font-weight:800;color:#666;margin:16px 0 7px}
+
+    .sort-preview-note{font-size:12px;color:var(--muted);background:#f8f9fb;border-radius:12px;padding:10px 12px;line-height:1.5;margin-bottom:12px}
+    .sort-block{margin-top:16px}
+    .sort-block-title{font-size:14px;font-weight:800;margin-bottom:8px}
+    .sort-row{display:grid;grid-template-columns:minmax(0,1fr) 42px 42px;gap:7px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:#fff;margin-bottom:7px}
+    .sort-row-name{font-weight:650;overflow-wrap:anywhere}
+    .sort-arrow{border:1px solid var(--line);background:#f8f9fb;border-radius:9px;height:36px;font-weight:800}
+    .sort-arrow:disabled{opacity:.35}
+
     @media (max-width:520px){
-      .actions{grid-template-columns:1fr 1fr}
+      .actions{grid-template-columns:1fr 1fr 1fr}
       .actions .primary{grid-column:1 / -1}
       h1{font-size:22px}
       th,td{font-size:12px}
@@ -95,7 +119,16 @@
       <button class="btn primary" id="dailyBtn">每日清點</button>
       <button class="btn secondary" id="addCategoryBtn">新增類別</button>
       <button class="btn secondary" id="addItemBtn">新增品項</button>
+      <button class="btn secondary" id="sortBtn">排序</button>
     </div>
+
+    <button class="warning-overview zero" id="warningOverview" type="button">
+      <div>
+        <div class="warning-main" id="warningOverviewText">預警品項 0 項</div>
+        <div class="warning-date" id="warningOverviewDate">等待清點資料</div>
+      </div>
+      <div class="warning-action" id="warningOverviewAction">只看預警</div>
+    </button>
 
     <input class="search" id="searchInput" placeholder="搜尋品項…" autocomplete="off" />
     <div id="content" class="loading">正在讀取庫存資料…</div>
@@ -116,6 +149,9 @@ let items = [];
 let records = [];
 let dateKeys = [];
 let dateLabels = [];
+let lowStockOnly = false;
+let previewCategories = [];
+let previewItems = [];
 
 const $ = (id) => document.getElementById(id);
 
@@ -166,8 +202,8 @@ async function loadAll(showLoading = true) {
   if (showLoading) $("content").innerHTML = '<div class="loading">正在讀取庫存資料…</div>';
 
   const [catRes, itemRes, dateRes] = await Promise.all([
-    sb.from("categories").select("id,name,created_at").order("id"),
-    sb.from("items").select("id,name,category_id,created_at").order("id"),
+    sb.from("categories").select("id,name,sort_order,created_at").order("sort_order", { ascending:true }).order("id", { ascending:true }),
+    sb.from("items").select("id,name,category_id,warning_threshold,sort_order,created_at").order("sort_order", { ascending:true }).order("id", { ascending:true }),
     sb.from("inventory_records").select("record_date").order("record_date", { ascending:false })
   ]);
 
@@ -212,9 +248,61 @@ async function loadAll(showLoading = true) {
     : `尚無清點紀錄｜最後更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
 }
 
+function getLatestLowStockItemIds() {
+  const latestDate = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
+  if (!latestDate) return new Set();
+
+  const latestMap = new Map(
+    records
+      .filter(r => r.record_date === latestDate)
+      .map(r => [r.item_id, r])
+  );
+
+  const ids = new Set();
+
+  for (const item of items) {
+    const r = latestMap.get(item.id);
+
+    if (
+      r &&
+      r.quantity !== null &&
+      item.warning_threshold !== null &&
+      item.warning_threshold !== undefined &&
+      Number(r.quantity) < Number(item.warning_threshold)
+    ) {
+      ids.add(item.id);
+    }
+  }
+
+  return ids;
+}
+
+function updateWarningOverview() {
+  const latestDate = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
+  const lowIds = getLatestLowStockItemIds();
+  const box = $("warningOverview");
+
+  $("warningOverviewText").textContent = `預警品項 ${lowIds.size} 項`;
+  $("warningOverviewDate").textContent = latestDate
+    ? `依最新一次清點 ${labelDate(latestDate)} 判斷`
+    : "目前尚無清點紀錄";
+  $("warningOverviewAction").textContent = lowStockOnly ? "顯示全部" : "只看預警";
+
+  box.classList.toggle("zero", lowIds.size === 0);
+  box.classList.toggle("active", lowStockOnly);
+}
+
 function render() {
   const q = $("searchInput").value.trim().toLowerCase();
-  const matchedItems = items.filter(i => i.name.toLowerCase().includes(q));
+  const lowIds = getLatestLowStockItemIds();
+
+  let matchedItems = items.filter(i => i.name.toLowerCase().includes(q));
+
+  if (lowStockOnly) {
+    matchedItems = matchedItems.filter(i => lowIds.has(i.id));
+  }
+
+  updateWarningOverview();
 
   if (!categories.length) {
     $("content").innerHTML = '<div class="empty-state">尚未建立類別。請先點「新增類別」。</div>';
@@ -227,7 +315,8 @@ function render() {
 
   for (const c of categories) {
     const catItems = matchedItems.filter(i => i.category_id === c.id);
-    if (!catItems.length && q) continue;
+
+    if (!catItems.length && (q || lowStockOnly)) continue;
 
     html += `<section class="category">
       <div class="category-title"><span>${esc(c.name)}</span><span class="sub">${catItems.length} 項</span></div>`;
@@ -249,25 +338,37 @@ function render() {
 
     for (const item of catItems) {
       html += `<tr><td><button class="item-name-btn" onclick="openEditItem(${item.id})">${esc(item.name)}</button></td>`;
+
       for (const d of dateKeys) {
         const r = recMap.get(`${item.id}|${d}`);
         const latestClass = d === latestDate ? "latest-cell" : "";
+
         if (r) {
           const qty = r.quantity === null ? "—" : esc(r.quantity);
           const note = r.note ? `<span class="note">${esc(r.note)}</span>` : "";
-          html += `<td class="${latestClass}"><button class="cell-btn has" onclick="openEditRecord(${r.id})">${qty}${note}</button></td>`;
+          const isLowStock = d === latestDate && lowIds.has(item.id);
+
+          html += `<td class="${latestClass}"><button class="cell-btn has ${isLowStock ? "low-stock" : ""}" onclick="openEditRecord(${r.id})">${qty}${note}</button></td>`;
         } else {
           html += `<td class="${latestClass}"><span class="empty">—</span></td>`;
         }
       }
+
       html += `</tr>`;
     }
+
     html += `</tbody></table></section>`;
   }
 
-  $("content").innerHTML = html || '<div class="empty-state">找不到符合的品項。</div>';
-}
+  if (!html) {
+    $("content").innerHTML = lowStockOnly
+      ? '<div class="empty-state">目前沒有符合條件的預警品項。</div>'
+      : '<div class="empty-state">找不到符合的品項。</div>';
+    return;
+  }
 
+  $("content").innerHTML = html;
+}
 function modalHeader(title) {
   return `<div class="modal-head"><h2>${title}</h2><button class="close" onclick="closeModal()">✕</button></div>`;
 }
@@ -275,7 +376,7 @@ function modalHeader(title) {
 function openAddCategory() {
   showModal(`${modalHeader("新增類別")}
     <label>類別名稱</label>
-    <input id="categoryName" placeholder="例如：請輸入類別" maxlength="80">
+    <input id="categoryName" placeholder="請輸入類別" maxlength="80">
     <label>管理密碼</label>
     <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
     <div class="modal-actions">
@@ -300,9 +401,12 @@ function openAddItem() {
   if (!categories.length) return toast("請先新增類別");
   showModal(`${modalHeader("新增品項")}
     <label>品項名稱</label>
-    <input id="itemName" placeholder="例如：請輸入品項名稱" maxlength="100">
+    <input id="itemName" placeholder="請輸入品項" maxlength="100">
     <label>所屬類別</label>
     <select id="categoryId">${categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
+    <label>預警值（選填）</label>
+    <input id="warningThreshold" type="number" inputmode="numeric" min="0" step="1" placeholder="例如：10">
+    <div class="sub" style="margin-top:6px;">最新一次清點數量低於此值時，數字會顯示紅色。</div>
     <label>管理密碼</label>
     <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
     <div class="modal-actions">
@@ -314,10 +418,13 @@ function openAddItem() {
 async function submitItem() {
   const itemName = $("itemName").value.trim();
   const categoryId = Number($("categoryId").value);
+  const warningRaw = $("warningThreshold").value.trim();
+  const warningThreshold = warningRaw === "" ? null : Number(warningRaw);
   const password = $("adminPassword").value;
   if (!itemName || !categoryId || !password) return toast("請完整填寫資料");
+  if (warningThreshold !== null && (!Number.isInteger(warningThreshold) || warningThreshold < 0)) return toast("預警值必須是 0 以上整數");
   const { data, error } = await sb.functions.invoke("admin-item", {
-    body: { password, itemName, categoryId }
+    body: { password, itemName, categoryId, warningThreshold }
   });
   if (error) return toast("新增失敗：" + error.message);
   if (!data?.success) return toast(data?.message || "新增失敗");
@@ -332,6 +439,17 @@ async function openDailyCount() {
       <label>清點日期</label>
       <input id="countDate" type="date" value="${localISODate()}" onchange="loadDailyRows()">
     </div>
+
+    <div class="progress-box" id="dailyProgressBox">
+      <div class="progress-line">
+        <div class="progress-title">清點完成度</div>
+        <div class="progress-count" id="dailyProgressCount">已填 0 / ${items.length} 項</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="dailyProgressFill"></div>
+      </div>
+    </div>
+
     <div id="dailyRows" class="loading">正在讀取該日紀錄…</div>
     <label>共同備註（選填）</label>
     <input id="dailyNote" placeholder="例如：早班清點">
@@ -383,7 +501,35 @@ async function loadDailyRows() {
   }
 
   holder.className = "count-list";
+  holder.dataset.existingCount = String(existingMap.size);
   holder.innerHTML = rows || '<div class="empty-state">目前沒有品項</div>';
+
+  document.querySelectorAll(".daily-qty").forEach(input => {
+    input.addEventListener("input", updateDailyProgress);
+  });
+
+  updateDailyProgress();
+}
+
+function updateDailyProgress() {
+  const holder = $("dailyRows");
+  const countEl = $("dailyProgressCount");
+  const fillEl = $("dailyProgressFill");
+  const boxEl = $("dailyProgressBox");
+
+  if (!holder || !countEl || !fillEl || !boxEl) return;
+
+  const existingCount = Number(holder.dataset.existingCount || 0);
+  const newlyFilled = [...document.querySelectorAll(".daily-qty")]
+    .filter(input => input.value !== "").length;
+
+  const total = items.length;
+  const completed = Math.min(existingCount + newlyFilled, total);
+  const percent = total ? Math.round((completed / total) * 100) : 0;
+
+  countEl.textContent = `已填 ${completed} / ${total} 項`;
+  fillEl.style.width = `${percent}%`;
+  boxEl.classList.toggle("complete", total > 0 && completed === total);
 }
 
 async function submitDaily() {
@@ -424,6 +570,136 @@ async function submitDaily() {
 
 
 
+
+function openSortManager() {
+  previewCategories = categories.map(c => ({...c}));
+  previewItems = items.map(i => ({...i}));
+  renderSortPreview();
+}
+
+function renderSortPreview(selectedCategoryId = null) {
+  if (!previewCategories.length) return toast("目前沒有類別");
+
+  const selectedId = selectedCategoryId ?? previewCategories[0].id;
+
+  const categoryRows = previewCategories.map((c, index) => `
+    <div class="sort-row">
+      <div class="sort-row-name">${index + 1}. ${esc(c.name)}</div>
+      <button class="sort-arrow" ${index === 0 ? "disabled" : ""} onclick="movePreviewCategory(${c.id}, -1)">↑</button>
+      <button class="sort-arrow" ${index === previewCategories.length - 1 ? "disabled" : ""} onclick="movePreviewCategory(${c.id}, 1)">↓</button>
+    </div>
+  `).join("");
+
+  const catOptions = previewCategories.map(c =>
+    `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>${esc(c.name)}</option>`
+  ).join("");
+
+  const catItems = previewItems.filter(i => i.category_id === selectedId);
+  const itemRows = catItems.length
+    ? catItems.map((item, index) => `
+        <div class="sort-row">
+          <div class="sort-row-name">${index + 1}. ${esc(item.name)}</div>
+          <button class="sort-arrow" ${index === 0 ? "disabled" : ""} onclick="movePreviewItem(${item.id}, -1, ${selectedId})">↑</button>
+          <button class="sort-arrow" ${index === catItems.length - 1 ? "disabled" : ""} onclick="movePreviewItem(${item.id}, 1, ${selectedId})">↓</button>
+        </div>
+      `).join("")
+    : '<div class="empty-state">這個類別目前沒有品項</div>';
+
+  showModal(`${modalHeader("排序")}
+    <div class="sort-preview-note">
+      使用 ↑ ↓ 調整顯示順序。類別可排序；品項則是在各自類別內排序。
+    </div>
+
+    <div class="sort-block">
+      <div class="sort-block-title">類別順序</div>
+      ${categoryRows}
+    </div>
+
+    <div class="sort-block">
+      <div class="sort-block-title">品項順序</div>
+      <select id="sortCategorySelect" onchange="renderSortPreview(Number(this.value))">
+        ${catOptions}
+      </select>
+      <div style="height:9px"></div>
+      ${itemRows}
+    </div>
+
+    <label>管理密碼</label>
+    <input id="sortAdminPassword" type="password" placeholder="請輸入管理密碼">
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveSortOrder(${selectedId})">儲存排序</button>
+    </div>`);
+}
+
+
+async function saveSortOrder(selectedCategoryId) {
+  const passwordInput = $("sortAdminPassword");
+  const password = passwordInput ? passwordInput.value : "";
+
+  if (!password) return toast("請輸入管理密碼");
+
+  const categoryOrder = previewCategories.map((category, index) => ({
+    id: category.id,
+    sort_order: index + 1
+  }));
+
+  const itemOrder = [];
+
+  for (const category of previewCategories) {
+    const catItems = previewItems.filter(item => item.category_id === category.id);
+
+    catItems.forEach((item, index) => {
+      itemOrder.push({
+        id: item.id,
+        sort_order: index + 1
+      });
+    });
+  }
+
+  const { data, error } = await sb.functions.invoke("admin-save-order", {
+    body: {
+      password,
+      categoryOrder,
+      itemOrder
+    }
+  });
+
+  if (error) return toast("排序儲存失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "排序儲存失敗");
+
+  closeModal();
+  toast("排序已儲存");
+  await loadAll(false);
+}
+
+function movePreviewCategory(categoryId, direction) {
+  const index = previewCategories.findIndex(c => c.id === categoryId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= previewCategories.length) return;
+
+  [previewCategories[index], previewCategories[target]] =
+    [previewCategories[target], previewCategories[index]];
+
+  renderSortPreview(categoryId);
+}
+
+function movePreviewItem(itemId, direction, categoryId) {
+  const catItems = previewItems.filter(i => i.category_id === categoryId);
+  const index = catItems.findIndex(i => i.id === itemId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= catItems.length) return;
+
+  const firstGlobal = previewItems.findIndex(i => i.id === catItems[index].id);
+  const secondGlobal = previewItems.findIndex(i => i.id === catItems[target].id);
+
+  [previewItems[firstGlobal], previewItems[secondGlobal]] =
+    [previewItems[secondGlobal], previewItems[firstGlobal]];
+
+  renderSortPreview(categoryId);
+}
+
 function openEditItem(itemId) {
   const item = items.find(i => i.id === itemId);
   if (!item) return toast("找不到這個品項");
@@ -436,6 +712,10 @@ function openEditItem(itemId) {
     <select id="editItemCategory">
       ${categories.map(c => `<option value="${c.id}" ${c.id === item.category_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
     </select>
+
+    <label>預警值（選填）</label>
+    <input id="editWarningThreshold" type="number" inputmode="numeric" min="0" step="1" value="${item.warning_threshold ?? ""}" placeholder="留空代表不啟用">
+    <div class="sub" style="margin-top:6px;">最新一次清點量低於此值時，數字會顯示紅色。</div>
 
     <label>管理密碼</label>
     <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
@@ -453,14 +733,17 @@ function openEditItem(itemId) {
 async function submitEditItem(itemId) {
   const itemName = $("editItemName").value.trim();
   const categoryId = Number($("editItemCategory").value);
+  const warningRaw = $("editWarningThreshold").value.trim();
+  const warningThreshold = warningRaw === "" ? null : Number(warningRaw);
   const password = $("adminPassword").value;
 
   if (!itemName) return toast("品項名稱不能空白");
   if (!categoryId) return toast("請選擇類別");
+  if (warningThreshold !== null && (!Number.isInteger(warningThreshold) || warningThreshold < 0)) return toast("預警值必須是 0 以上整數");
   if (!password) return toast("請輸入管理密碼");
 
   const { data, error } = await sb.functions.invoke("admin-update-item", {
-    body: { password, itemId, itemName, categoryId }
+    body: { password, itemId, itemName, categoryId, warningThreshold }
   });
 
   if (error) return toast("修改失敗：" + error.message);
@@ -572,10 +855,15 @@ async function submitDeleteItem(itemId) {
 }
 
 $("refreshBtn").addEventListener("click", () => loadAll());
+$("warningOverview").addEventListener("click", () => {
+  lowStockOnly = !lowStockOnly;
+  render();
+});
 $("searchInput").addEventListener("input", render);
 $("dailyBtn").addEventListener("click", openDailyCount);
 $("addCategoryBtn").addEventListener("click", openAddCategory);
 $("addItemBtn").addEventListener("click", openAddItem);
+$("sortBtn").addEventListener("click", openSortManager);
 
 loadAll();
 setInterval(() => loadAll(false), 30000);
