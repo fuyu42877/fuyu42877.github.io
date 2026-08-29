@@ -21,10 +21,12 @@
     .sub{font-size:13px;color:var(--muted)}
     .icon-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}
     .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
+    .actions .primary{grid-column:1 / -1}
     .btn{border:0;border-radius:12px;padding:12px 10px;font-weight:700;background:#fff;box-shadow:0 1px 0 var(--line)}
     .btn.primary{background:var(--primary);color:#fff}
     .btn.danger{background:var(--danger);color:#fff}
     .btn.secondary{border:1px solid var(--line)}
+    .btn.delete-text{border:1px solid var(--line);color:#d1242f;background:#fff}
     .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;margin-bottom:12px}
     .category{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin:12px 0}
     .category-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:16px;font-weight:800;border-bottom:1px solid var(--line)}
@@ -69,7 +71,7 @@
     .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:7px}
     .section-label{font-size:12px;font-weight:800;color:#666;margin:16px 0 7px}
     @media (max-width:520px){
-      .actions{grid-template-columns:1fr 1fr}
+      .actions{grid-template-columns:1fr 1fr 1fr}
       .actions .primary{grid-column:1 / -1}
       h1{font-size:22px}
       th,td{font-size:12px}
@@ -92,6 +94,7 @@
       <button class="btn primary" id="dailyBtn">每日清點</button>
       <button class="btn secondary" id="addCategoryBtn">新增類別</button>
       <button class="btn secondary" id="addItemBtn">新增品項</button>
+      <button class="btn delete-text" id="deleteItemBtn">刪除品項</button>
     </div>
 
     <input class="search" id="searchInput" placeholder="搜尋品項…" autocomplete="off" />
@@ -419,6 +422,77 @@ async function submitDaily() {
   await loadAll(false);
 }
 
+
+function openDeleteItemManager() {
+  if (!items.length) return toast("目前沒有可刪除的品項");
+
+  const options = categories.map(c => {
+    const catItems = items.filter(i => i.category_id === c.id);
+    if (!catItems.length) return "";
+    return `<optgroup label="${esc(c.name)}">
+      ${catItems.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join("")}
+    </optgroup>`;
+  }).join("");
+
+  showModal(`${modalHeader("刪除品項")}
+    <label>選擇要刪除的品項</label>
+    <select id="deleteItemId">${options}</select>
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="openDeleteConfirm()">刪除品項</button>
+    </div>`);
+}
+
+function openDeleteConfirm() {
+  const itemId = Number($("deleteItemId").value);
+  const item = items.find(i => i.id === itemId);
+  if (!item) return toast("找不到這個品項");
+
+  showModal(`${modalHeader("確定刪除？")}
+    <p style="line-height:1.6;">
+      你即將刪除「<strong>${esc(item.name)}</strong>」。
+    </p>
+    <div class="sub" style="line-height:1.6;margin-bottom:12px;">
+      這個動作會永久刪除該品項與它的歷史清點紀錄。
+    </div>
+
+    <label>請輸入「確定」</label>
+    <input id="deleteConfirmText" placeholder="輸入：確定" autocomplete="off">
+
+    <label>管理密碼</label>
+    <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="submitDeleteItem(${item.id})">永久刪除</button>
+    </div>`);
+}
+
+async function submitDeleteItem(itemId) {
+  const confirmText = $("deleteConfirmText").value.trim();
+  const password = $("adminPassword").value;
+
+  if (confirmText !== "確定") {
+    return toast('請正確輸入「確定」');
+  }
+
+  if (!password) {
+    return toast("請輸入管理密碼");
+  }
+
+  const { data, error } = await sb.functions.invoke("admin-delete-item", {
+    body: { password, itemId }
+  });
+
+  if (error) return toast("刪除失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "刪除失敗");
+
+  closeModal();
+  toast("品項已刪除");
+  await loadAll(false);
+}
+
 function openEditRecord(recordId) {
   const r = records.find(x => x.id === recordId);
   if (!r) return;
@@ -481,6 +555,7 @@ $("searchInput").addEventListener("input", render);
 $("dailyBtn").addEventListener("click", openDailyCount);
 $("addCategoryBtn").addEventListener("click", openAddCategory);
 $("addItemBtn").addEventListener("click", openAddItem);
+$("deleteItemBtn").addEventListener("click", openDeleteItemManager);
 
 loadAll();
 setInterval(() => loadAll(false), 30000);
