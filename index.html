@@ -20,7 +20,7 @@
     h1{font-size:24px;margin:0 0 5px}
     .sub{font-size:13px;color:var(--muted)}
     .icon-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}
-    .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
     .actions .primary{grid-column:1 / -1}
     .btn{border:0;border-radius:12px;padding:12px 10px;font-weight:700;background:#fff;box-shadow:0 1px 0 var(--line)}
     .btn.primary{background:var(--primary);color:#fff}
@@ -40,6 +40,7 @@
     .cell-btn.has:active{background:var(--soft)}
     .empty{color:#aaa}
     .item-name{font-weight:650;line-height:1.25;overflow-wrap:anywhere}
+    .item-name-btn{border:0;background:transparent;padding:4px 0;text-align:left;font-weight:700;color:inherit;width:100%;overflow-wrap:anywhere}
     .note{display:block;font-size:9px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .latest-head{font-size:15px!important;font-weight:850!important;color:#222!important;background:#f4f7fd!important}
     .latest-cell{background:#fbfcff}
@@ -71,7 +72,7 @@
     .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:7px}
     .section-label{font-size:12px;font-weight:800;color:#666;margin:16px 0 7px}
     @media (max-width:520px){
-      .actions{grid-template-columns:1fr 1fr 1fr}
+      .actions{grid-template-columns:1fr 1fr}
       .actions .primary{grid-column:1 / -1}
       h1{font-size:22px}
       th,td{font-size:12px}
@@ -94,7 +95,6 @@
       <button class="btn primary" id="dailyBtn">每日清點</button>
       <button class="btn secondary" id="addCategoryBtn">新增類別</button>
       <button class="btn secondary" id="addItemBtn">新增品項</button>
-      <button class="btn delete-text" id="deleteItemBtn">刪除品項</button>
     </div>
 
     <input class="search" id="searchInput" placeholder="搜尋品項…" autocomplete="off" />
@@ -248,7 +248,7 @@ function render() {
       ).join("")}</tr></thead><tbody>`;
 
     for (const item of catItems) {
-      html += `<tr><td><span class="item-name">${esc(item.name)}</span></td>`;
+      html += `<tr><td><button class="item-name-btn" onclick="openEditItem(${item.id})">${esc(item.name)}</button></td>`;
       for (const d of dateKeys) {
         const r = recMap.get(`${item.id}|${d}`);
         const latestClass = d === latestDate ? "latest-cell" : "";
@@ -300,7 +300,7 @@ function openAddItem() {
   if (!categories.length) return toast("請先新增類別");
   showModal(`${modalHeader("新增品項")}
     <label>品項名稱</label>
-    <input id="itemName" placeholder="例如：請輸入品項" maxlength="100">
+    <input id="itemName" placeholder="例如：請輸入品項名稱" maxlength="100">
     <label>所屬類別</label>
     <select id="categoryId">${categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
     <label>管理密碼</label>
@@ -423,29 +423,55 @@ async function submitDaily() {
 }
 
 
-function openDeleteItemManager() {
-  if (!items.length) return toast("目前沒有可刪除的品項");
 
-  const options = categories.map(c => {
-    const catItems = items.filter(i => i.category_id === c.id);
-    if (!catItems.length) return "";
-    return `<optgroup label="${esc(c.name)}">
-      ${catItems.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join("")}
-    </optgroup>`;
-  }).join("");
+function openEditItem(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return toast("找不到這個品項");
 
-  showModal(`${modalHeader("刪除品項")}
-    <label>選擇要刪除的品項</label>
-    <select id="deleteItemId">${options}</select>
+  showModal(`${modalHeader("修改品項")}
+    <label>品項名稱</label>
+    <input id="editItemName" value="${esc(item.name)}" maxlength="100">
+
+    <label>所屬類別</label>
+    <select id="editItemCategory">
+      ${categories.map(c => `<option value="${c.id}" ${c.id === item.category_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
+    </select>
+
+    <label>管理密碼</label>
+    <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
 
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal()">取消</button>
-      <button class="btn danger" onclick="openDeleteConfirm()">刪除品項</button>
+      <button class="btn primary" onclick="submitEditItem(${item.id})">儲存修改</button>
+    </div>
+
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">
+      <button class="btn delete-text" style="width:100%;" onclick="openDeleteConfirmFromItem(${item.id})">刪除這個品項</button>
     </div>`);
 }
 
-function openDeleteConfirm() {
-  const itemId = Number($("deleteItemId").value);
+async function submitEditItem(itemId) {
+  const itemName = $("editItemName").value.trim();
+  const categoryId = Number($("editItemCategory").value);
+  const password = $("adminPassword").value;
+
+  if (!itemName) return toast("品項名稱不能空白");
+  if (!categoryId) return toast("請選擇類別");
+  if (!password) return toast("請輸入管理密碼");
+
+  const { data, error } = await sb.functions.invoke("admin-update-item", {
+    body: { password, itemId, itemName, categoryId }
+  });
+
+  if (error) return toast("修改失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "修改失敗");
+
+  closeModal();
+  toast("品項修改成功");
+  await loadAll(false);
+}
+
+function openDeleteConfirmFromItem(itemId) {
   const item = items.find(i => i.id === itemId);
   if (!item) return toast("找不到這個品項");
 
@@ -473,13 +499,8 @@ async function submitDeleteItem(itemId) {
   const confirmText = $("deleteConfirmText").value.trim();
   const password = $("adminPassword").value;
 
-  if (confirmText !== "確定") {
-    return toast('請正確輸入「確定」');
-  }
-
-  if (!password) {
-    return toast("請輸入管理密碼");
-  }
+  if (confirmText !== "確定") return toast('請正確輸入「確定」');
+  if (!password) return toast("請輸入管理密碼");
 
   const { data, error } = await sb.functions.invoke("admin-delete-item", {
     body: { password, itemId }
@@ -555,7 +576,6 @@ $("searchInput").addEventListener("input", render);
 $("dailyBtn").addEventListener("click", openDailyCount);
 $("addCategoryBtn").addEventListener("click", openAddCategory);
 $("addItemBtn").addEventListener("click", openAddItem);
-$("deleteItemBtn").addEventListener("click", openDeleteItemManager);
 
 loadAll();
 setInterval(() => loadAll(false), 30000);
