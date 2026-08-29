@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7f9" />
+  <title>庫存清點紀錄</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#f6f7f9;--card:#fff;--text:#171717;--muted:#747474;--line:#e6e7ea;
+      --primary:#1f6feb;--danger:#d1242f;--soft:#eef4ff;--shadow:0 8px 26px rgba(0,0,0,.06);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text)}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:760px;margin:auto;padding:18px 14px 90px}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h1{font-size:24px;margin:0 0 5px}
+    .sub{font-size:13px;color:var(--muted)}
+    .icon-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}
+    .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
+    .btn{border:0;border-radius:12px;padding:12px 10px;font-weight:700;background:#fff;box-shadow:0 1px 0 var(--line)}
+    .btn.primary{background:var(--primary);color:#fff}
+    .btn.danger{background:var(--danger);color:#fff}
+    .btn.secondary{border:1px solid var(--line)}
+    .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;margin-bottom:12px}
+    .category{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin:12px 0}
+    .category-title{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:16px;font-weight:800;border-bottom:1px solid var(--line)}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:430px}
+    th,td{border-bottom:1px solid var(--line);padding:11px 8px;text-align:center;font-size:14px}
+    th{background:#fafafa;font-weight:700;color:#555}
+    th:first-child,td:first-child{text-align:left;padding-left:14px;min-width:125px}
+    tr:last-child td{border-bottom:none}
+    .cell-btn{border:0;background:transparent;padding:5px 8px;border-radius:8px;min-width:48px}
+    .cell-btn.has:hover{background:var(--soft)}
+    .empty{color:#aaa}
+    .item-name{font-weight:650}
+    .note{display:block;font-size:11px;color:var(--muted);margin-top:3px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .delete-item{border:0;background:none;color:#aaa;font-size:12px;padding:2px 4px;margin-left:4px}
+    .empty-state{padding:28px 16px;text-align:center;color:var(--muted);background:#fff;border-radius:16px}
+    .loading{padding:28px;text-align:center;color:var(--muted)}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);display:none;align-items:flex-end;justify-content:center;z-index:50}
+    .modal-backdrop.show{display:flex}
+    .modal{background:#fff;width:min(760px,100%);border-radius:20px 20px 0 0;max-height:88vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .modal h2{font-size:20px;margin:0}
+    .close{border:0;background:#f1f1f1;border-radius:50%;width:34px;height:34px}
+    label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+    input,select,textarea{width:100%;border:1px solid #d9dce1;border-radius:11px;padding:12px;background:#fff;outline:none}
+    textarea{resize:vertical;min-height:72px}
+    .modal-actions{display:flex;gap:9px;margin-top:18px}
+    .modal-actions .btn{flex:1}
+    .count-list{display:flex;flex-direction:column;gap:10px}
+    .count-row{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:10px;align-items:center;padding:10px;background:#f8f9fb;border-radius:12px}
+    .count-row input{padding:10px;text-align:center}
+    .count-cat{font-size:12px;color:var(--muted)}
+    .already{font-size:12px;color:var(--muted)}
+    .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#202124;color:#fff;padding:11px 15px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:90%;text-align:center}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:7px}
+    .section-label{font-size:12px;font-weight:800;color:#666;margin:16px 0 7px}
+    @media (max-width:520px){
+      .actions{grid-template-columns:1fr 1fr}
+      .actions .primary{grid-column:1 / -1}
+      h1{font-size:22px}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="top">
+      <div>
+        <h1>庫存清點紀錄</h1>
+        <div class="sub" id="lastUpdated">載入中…</div>
+      </div>
+      <button class="icon-btn" id="refreshBtn">重新整理</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="dailyBtn">每日清點</button>
+      <button class="btn secondary" id="addCategoryBtn">新增類別</button>
+      <button class="btn secondary" id="addItemBtn">新增品項</button>
+    </div>
+
+    <input class="search" id="searchInput" placeholder="搜尋品項…" autocomplete="off" />
+    <div id="content" class="loading">正在讀取庫存資料…</div>
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://jtbmeajtjrxxqhtubtnq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_v0eeDGfyBeiO8khjE3jdUQ_HnfPY7Hd";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let categories = [];
+let items = [];
+let records = [];
+let dateKeys = [];
+let dateLabels = [];
+
+const $ = (id) => document.getElementById(id);
+
+function localISODate(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function getRecentDates() {
+  const keys = [], labels = [];
+  for (let i = 2; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(12,0,0,0);
+    d.setDate(d.getDate() - i);
+    keys.push(localISODate(d));
+    labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+  }
+  return { keys, labels };
+}
+function esc(v="") {
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+}
+function showModal(html) {
+  $("modal").innerHTML = html;
+  $("modalBackdrop").classList.add("show");
+}
+function closeModal() {
+  $("modalBackdrop").classList.remove("show");
+}
+$("modalBackdrop").addEventListener("click", e => {
+  if (e.target === $("modalBackdrop")) closeModal();
+});
+
+async function loadAll(showLoading = true) {
+  if (showLoading) $("content").innerHTML = '<div class="loading">正在讀取庫存資料…</div>';
+  const dates = getRecentDates();
+  dateKeys = dates.keys;
+  dateLabels = dates.labels;
+
+  const [catRes, itemRes, recRes] = await Promise.all([
+    sb.from("categories").select("id,name,created_at").order("id"),
+    sb.from("items").select("id,name,category_id,created_at").order("id"),
+    sb.from("inventory_records")
+      .select("id,item_id,record_date,quantity,note,created_at")
+      .gte("record_date", dateKeys[0])
+      .lte("record_date", dateKeys[2])
+      .order("record_date")
+  ]);
+
+  const firstError = catRes.error || itemRes.error || recRes.error;
+  if (firstError) {
+    $("content").innerHTML = `<div class="empty-state">讀取失敗：${esc(firstError.message)}</div>`;
+    return;
+  }
+
+  categories = catRes.data || [];
+  items = itemRes.data || [];
+  records = recRes.data || [];
+
+  render();
+  $("lastUpdated").textContent = `最近三天｜最後更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
+}
+
+function render() {
+  const q = $("searchInput").value.trim().toLowerCase();
+  const matchedItems = items.filter(i => i.name.toLowerCase().includes(q));
+
+  if (!categories.length) {
+    $("content").innerHTML = '<div class="empty-state">尚未建立類別。請先點「新增類別」。</div>';
+    return;
+  }
+
+  const recMap = new Map(records.map(r => [`${r.item_id}|${r.record_date}`, r]));
+  let html = "";
+
+  for (const c of categories) {
+    const catItems = matchedItems.filter(i => i.category_id === c.id);
+    if (!catItems.length && q) continue;
+
+    html += `<section class="category">
+      <div class="category-title"><span>${esc(c.name)}</span><span class="sub">${catItems.length} 項</span></div>`;
+
+    if (!catItems.length) {
+      html += `<div class="empty-state">這個類別目前沒有品項</div></section>`;
+      continue;
+    }
+
+    html += `<div class="table-wrap"><table>
+      <thead><tr><th>品項</th>${dateLabels.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`;
+
+    for (const item of catItems) {
+      html += `<tr><td><span class="item-name">${esc(item.name)}</span>
+        <button class="delete-item" onclick="openDeleteItem(${item.id})">刪除</button></td>`;
+      for (const d of dateKeys) {
+        const r = recMap.get(`${item.id}|${d}`);
+        if (r) {
+          const qty = r.quantity === null ? "—" : esc(r.quantity);
+          const note = r.note ? `<span class="note">${esc(r.note)}</span>` : "";
+          html += `<td><button class="cell-btn has" onclick="openEditRecord(${r.id})">${qty}${note}</button></td>`;
+        } else {
+          html += `<td><span class="empty">—</span></td>`;
+        }
+      }
+      html += `</tr>`;
+    }
+    html += `</tbody></table></div></section>`;
+  }
+
+  $("content").innerHTML = html || '<div class="empty-state">找不到符合的品項。</div>';
+}
+
+function modalHeader(title) {
+  return `<div class="modal-head"><h2>${title}</h2><button class="close" onclick="closeModal()">✕</button></div>`;
+}
+
+function openAddCategory() {
+  showModal(`${modalHeader("新增類別")}
+    <label>類別名稱</label>
+    <input id="categoryName" placeholder="請輸入類別" maxlength="80">
+    <label>管理密碼</label>
+    <input id="adminPassword" type="password" placeholder="請輸入密碼">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="submitCategory()">新增</button>
+    </div>`);
+}
+
+async function submitCategory() {
+  const categoryName = $("categoryName").value.trim();
+  const password = $("adminPassword").value;
+  if (!categoryName || !password) return toast("請填寫類別名稱與密碼");
+  const { data, error } = await sb.functions.invoke("admin-category", {
+    body: { password, categoryName }
+  });
+  if (error) return toast("新增失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "新增失敗");
+  closeModal(); toast("類別新增成功"); await loadAll(false);
+}
+
+function openAddItem() {
+  if (!categories.length) return toast("請先新增類別");
+  showModal(`${modalHeader("新增品項")}
+    <label>品項名稱</label>
+    <input id="itemName" placeholder="請輸入品項" maxlength="100">
+    <label>所屬類別</label>
+    <select id="categoryId">${categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
+    <label>管理密碼</label>
+    <input id="adminPassword" type="password" placeholder="請輸入密碼">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="submitItem()">新增</button>
+    </div>`);
+}
+
+async function submitItem() {
+  const itemName = $("itemName").value.trim();
+  const categoryId = Number($("categoryId").value);
+  const password = $("adminPassword").value;
+  if (!itemName || !categoryId || !password) return toast("請完整填寫資料");
+  const { data, error } = await sb.functions.invoke("admin-item", {
+    body: { password, itemName, categoryId }
+  });
+  if (error) return toast("新增失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "新增失敗");
+  closeModal(); toast("品項新增成功"); await loadAll(false);
+}
+
+function openDailyCount() {
+  if (!items.length) return toast("目前沒有可清點的品項");
+  const today = localISODate();
+  const todayMap = new Map(records.filter(r => r.record_date === today).map(r => [r.item_id, r]));
+
+  let rows = "";
+  for (const c of categories) {
+    const catItems = items.filter(i => i.category_id === c.id);
+    if (!catItems.length) continue;
+    rows += `<div class="section-label">${esc(c.name)}</div>`;
+    for (const i of catItems) {
+      const existing = todayMap.get(i.id);
+      rows += `<div class="count-row">
+        <div><div class="item-name">${esc(i.name)}</div>
+          ${existing ? `<div class="already">今日已清點：${existing.quantity ?? "—"}${existing.note ? "｜"+esc(existing.note) : ""}</div>` : ""}
+        </div>
+        ${existing
+          ? `<input value="${existing.quantity ?? ""}" disabled>`
+          : `<input class="daily-qty" data-item-id="${i.id}" inputmode="numeric" type="number" min="0" step="1" placeholder="數量">`}
+      </div>`;
+    }
+  }
+  showModal(`${modalHeader("每日清點")}
+    <div class="sub">日期：${today}。已經有今日紀錄的品項不會重複新增；若要更正，請回首頁點該數字並輸入管理密碼。</div>
+    <div class="count-list">${rows}</div>
+    <label>共同備註（選填）</label>
+    <input id="dailyNote" placeholder="例如：早班清點">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="submitDaily()">完成今日清點</button>
+    </div>`);
+}
+
+async function submitDaily() {
+  const inputs = [...document.querySelectorAll(".daily-qty")];
+  const note = $("dailyNote").value.trim() || null;
+  const payload = [];
+
+  for (const input of inputs) {
+    if (input.value === "") continue;
+    const qty = Number(input.value);
+    if (!Number.isInteger(qty) || qty < 0) return toast("數量只能輸入 0 以上整數");
+    payload.push({
+      item_id: Number(input.dataset.itemId),
+      record_date: localISODate(),
+      quantity: qty,
+      note
+    });
+  }
+
+  if (!payload.length) return toast("請至少輸入一個品項數量");
+
+  const { error } = await sb.from("inventory_records").insert(payload);
+  if (error) {
+    if (String(error.message).toLowerCase().includes("duplicate")) {
+      return toast("有品項今天已經清點過，請重新整理後再試");
+    }
+    return toast("清點送出失敗：" + error.message);
+  }
+  closeModal(); toast(`已送出 ${payload.length} 個品項`); await loadAll(false);
+}
+
+function openEditRecord(recordId) {
+  const r = records.find(x => x.id === recordId);
+  if (!r) return;
+  const item = items.find(i => i.id === r.item_id);
+  showModal(`${modalHeader("修改清點紀錄")}
+    <div class="sub">${esc(item?.name || "")}｜${esc(r.record_date)}</div>
+    <label>數量</label>
+    <input id="editQuantity" type="number" inputmode="numeric" min="0" step="1" value="${r.quantity ?? ""}" placeholder="可留空">
+    <label>備註</label>
+    <textarea id="editNote" placeholder="選填">${esc(r.note || "")}</textarea>
+    <label>管理密碼</label>
+    <input id="adminPassword" type="password" placeholder="請輸入密碼">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="submitEditRecord(${r.id})">儲存修改</button>
+    </div>`);
+}
+
+async function submitEditRecord(recordId) {
+  const quantity = $("editQuantity").value;
+  const note = $("editNote").value;
+  const password = $("adminPassword").value;
+  if (!password) return toast("請輸入密碼");
+
+  const { data, error } = await sb.functions.invoke("admin-update-record", {
+    body: { password, recordId, quantity, note }
+  });
+  if (error) return toast("修改失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "修改失敗");
+  closeModal(); toast("紀錄修改成功"); await loadAll(false);
+}
+
+function openDeleteItem(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  showModal(`${modalHeader("刪除品項")}
+    <p>確定要刪除「<strong>${esc(item.name)}</strong>」嗎？</p>
+    <div class="hint">若這個品項已經有歷史清點紀錄，系統會拒絕刪除，以免破壞舊資料。</div>
+    <label>管理密碼</label>
+    <input id="adminPassword" type="password" placeholder="請輸入管理密碼">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="submitDeleteItem(${item.id})">確認刪除</button>
+    </div>`);
+}
+
+async function submitDeleteItem(itemId) {
+  const password = $("adminPassword").value;
+  if (!password) return toast("請輸入管理密碼");
+  const { data, error } = await sb.functions.invoke("admin-delete-item", {
+    body: { password, itemId }
+  });
+  if (error) return toast("刪除失敗：" + error.message);
+  if (!data?.success) return toast(data?.message || "刪除失敗");
+  closeModal(); toast("品項已刪除"); await loadAll(false);
+}
+
+$("refreshBtn").addEventListener("click", () => loadAll());
+$("searchInput").addEventListener("input", render);
+$("dailyBtn").addEventListener("click", openDailyCount);
+$("addCategoryBtn").addEventListener("click", openAddCategory);
+$("addItemBtn").addEventListener("click", openAddItem);
+
+loadAll();
+setInterval(() => loadAll(false), 30000);
+</script>
+</body>
+</html>
