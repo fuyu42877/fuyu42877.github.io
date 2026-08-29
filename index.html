@@ -111,12 +111,15 @@
     .modal-actions{display:flex;gap:9px;margin-top:18px}
     .modal-actions .btn{flex:1}
     .count-list{display:flex;flex-direction:column;gap:10px}
-    .count-row{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:10px;align-items:center;padding:11px;background:#f8f9fb;border:1px solid #eef0f3;border-radius:13px}
+    .count-row{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:10px;align-items:center;padding:11px;background:#f8f9fb;border:1px solid #eef0f3;border-radius:13px}
     .count-row input{padding:10px;text-align:center}
     .count-cat{font-size:12px;color:var(--muted)}
     .already{font-size:12px;color:var(--muted)}
     .date-box{background:#f8f9fb;border-radius:14px;padding:12px;margin-bottom:12px}
     .date-box label{margin-top:0}
+    .count-control{display:flex;flex-direction:column;gap:6px}
+    .copy-item-btn{width:100%;border:1px solid #d9e2f7;background:#f7faff;border-radius:9px;padding:6px 4px;color:var(--primary);font-size:10px;font-weight:800;line-height:1.2}
+    .copy-item-btn:active{transform:scale(.985)}
     .progress-box{position:sticky;top:-1px;z-index:3;background:rgba(248,249,251,.96);backdrop-filter:blur(8px);border:1px solid #eceef2;border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 5px 14px rgba(17,24,39,.045)}
     .progress-line{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .progress-title{font-size:14px;font-weight:800}
@@ -569,8 +572,11 @@ async function loadDailyRows() {
           ${existing ? `<div class="already">此日已清點：${existing.quantity ?? "—"}${existing.note ? "｜"+esc(existing.note) : ""}</div>` : ""}
         </div>
         ${existing
-          ? `<input value="${existing.quantity ?? ""}" disabled>`
-          : `<input class="daily-qty" data-item-id="${i.id}" inputmode="numeric" type="number" min="0" step="1" placeholder="數量">`}
+          ? `<div class="count-control"><input value="${existing.quantity ?? ""}" disabled></div>`
+          : `<div class="count-control">
+               <button class="copy-item-btn" type="button" onclick="copyPreviousItem(${i.id})">同上次</button>
+               <input id="daily-qty-${i.id}" class="daily-qty" data-item-id="${i.id}" inputmode="numeric" type="number" min="0" step="1" placeholder="數量">
+             </div>`}
       </div>`;
     }
   }
@@ -605,6 +611,39 @@ function updateDailyProgress() {
   countEl.textContent = `已填 ${completed} / ${total} 項`;
   fillEl.style.width = `${percent}%`;
   boxEl.classList.toggle("complete", total > 0 && completed === total);
+}
+
+
+
+async function copyPreviousItem(itemId) {
+  const selectedDate = $("countDate")?.value;
+  if (!selectedDate) return toast("請先選擇清點日期");
+
+  const input = $(`daily-qty-${itemId}`);
+  if (!input) return;
+
+  const { data, error } = await sb
+    .from("inventory_records")
+    .select("record_date,quantity")
+    .eq("item_id", Number(itemId))
+    .lt("record_date", selectedDate)
+    .order("record_date", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    return toast("讀取上次清點失敗：" + error.message);
+  }
+
+  const previous = data?.[0];
+
+  if (!previous || previous.quantity === null || previous.quantity === undefined) {
+    return toast("這個品項找不到上次清點數量");
+  }
+
+  input.value = previous.quantity;
+  updateDailyProgress();
+
+  toast(`已帶入 ${labelDate(previous.record_date)} 的數量`);
 }
 
 async function submitDaily() {
