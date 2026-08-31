@@ -475,10 +475,15 @@ function render() {
         clickAction = `onclick="openEditRecord(${todayRecord.id})"`;
       }
 
+      const todayNote = todayRecord?.note
+        ? `<span class="note">${esc(todayRecord.note)}</span>`
+        : "";
+
       html += `<td class="latest-cell">
         <button class="cell-btn has ${isLowStock ? "low-stock" : ""}" ${clickAction}>
           ${qtyText}
           ${isLowStock ? '<span class="low-tag">低庫存</span>' : ''}
+          ${todayNote}
         </button>
       </td>`;
 
