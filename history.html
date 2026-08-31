@@ -17,10 +17,13 @@
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:linear-gradient(180deg,#f8fafc 0,#f4f6f8 180px);color:var(--text);-webkit-font-smoothing:antialiased}
     button,input,select{font:inherit}
     button{cursor:pointer}
-    .app{max-width:760px;margin:auto;padding:18px 14px 110px}
+    .app{max-width:760px;margin:auto;padding:18px 14px 40px}
     .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
     h1{font-size:24px;letter-spacing:-.4px;margin:0 0 5px}
     .sub{font-size:13px;color:var(--muted)}
+    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 0 auto;white-space:nowrap}
+    .export-top-btn{border:1px solid var(--line);background:#f1f2f4;border-radius:10px;padding:7px 9px;color:#4f5660;font-size:11px;font-weight:750;box-shadow:none}
+    .export-top-btn:disabled{opacity:.45}
     .back-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 10px;color:var(--primary);font-size:13px;font-weight:750;box-shadow:var(--shadow-soft)}
     .filter-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:14px;box-shadow:var(--shadow);margin-bottom:13px}
     .filter-title{font-size:13px;font-weight:800;margin-bottom:9px}
@@ -43,10 +46,6 @@
     .note{font-size:10px;color:var(--muted);margin-top:2px}
     .empty-state{padding:32px 16px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:17px}
     .loading{padding:32px;text-align:center;color:var(--muted)}
-    .export-wrap{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(244,246,248,.92);backdrop-filter:blur(12px);border-top:1px solid rgba(231,233,238,.9)}
-    .export-inner{max-width:760px;margin:auto}
-    .export-btn{width:100%;border:0;border-radius:14px;padding:13px 14px;background:var(--primary);color:#fff;font-weight:820;box-shadow:0 7px 16px rgba(47,111,228,.20)}
-    .export-btn:disabled{opacity:.5}
     @media (max-width:420px){
       h1{font-size:22px}
       .row{grid-template-columns:minmax(0,1fr) 72px}
@@ -147,7 +146,10 @@
         <h1>歷史清點紀錄</h1>
         <div class="sub">依月份查看完整清點紀錄</div>
       </div>
-      <button class="back-btn" id="backBtn">返回首頁</button>
+      <div class="top-actions">
+        <button class="export-top-btn" id="exportBtn" disabled>匯出 Excel</button>
+        <button class="back-btn" id="backBtn">返回首頁</button>
+      </div>
     </div>
 
     <section class="filter-card">
@@ -165,13 +167,6 @@
 
     <div id="content" class="loading">正在讀取歷史紀錄…</div>
   </main>
-
-  <div class="export-wrap">
-    <div class="export-inner">
-      <button class="export-btn" id="exportBtn" disabled>匯出 Excel</button>
-    </div>
-  </div>
-
 <script>
 const SUPABASE_URL = "https://jtbmeajtjrxxqhtubtnq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_v0eeDGfyBeiO8khjE3jdUQ_HnfPY7Hd";

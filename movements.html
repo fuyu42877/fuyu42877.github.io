@@ -18,14 +18,17 @@
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:linear-gradient(180deg,#f8fafc 0,#f4f6f8 180px);color:var(--text);-webkit-font-smoothing:antialiased}
     button,select{font:inherit}
     button{cursor:pointer}
-    .app{max-width:860px;margin:auto;padding:18px 14px 110px}
+    .app{max-width:860px;margin:auto;padding:18px 14px 40px}
     .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
     h1{font-size:24px;letter-spacing:-.4px;margin:0 0 5px}
     .sub{font-size:13px;color:var(--muted)}
+    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 0 auto;white-space:nowrap}
+    .export-top-btn{border:1px solid var(--line);background:#f1f2f4;border-radius:10px;padding:7px 9px;color:#4f5660;font-size:11px;font-weight:750;box-shadow:none}
+    .export-top-btn:disabled{opacity:.45}
     .back-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 10px;color:var(--primary);font-size:13px;font-weight:750;box-shadow:var(--shadow-soft)}
     .filter-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:14px;box-shadow:var(--shadow);margin-bottom:13px}
     .filter-title{font-size:13px;font-weight:800;margin-bottom:9px}
-    .filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .filter-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
     select{width:100%;border:1px solid #d9dce1;border-radius:12px;padding:11px;background:#fff;outline:none}
     .summary{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 1px 12px}
     .summary-title{font-size:14px;font-weight:850}
@@ -44,10 +47,84 @@
     .qty.out{color:var(--danger);font-weight:850}
     .person-note{min-width:150px;max-width:240px;white-space:normal;line-height:1.4}
     .empty-state,.loading{padding:32px 16px;text-align:center;color:var(--muted)}
-    .export-wrap{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(244,246,248,.92);backdrop-filter:blur(12px);border-top:1px solid rgba(231,233,238,.9)}
-    .export-inner{max-width:860px;margin:auto}
-    .export-btn{width:100%;border:0;border-radius:14px;padding:13px 14px;background:var(--primary);color:#fff;font-weight:820;box-shadow:0 7px 16px rgba(47,111,228,.20)}
-    .export-btn:disabled{opacity:.5}
+  
+    .day-card{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow);overflow:hidden;margin:13px 0}
+    .day-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(180deg,#fff,#fafbfc);border-bottom:1px solid var(--line)}
+    .day-date{font-size:16px;font-weight:850}
+    .day-count{font-size:11px;color:var(--muted)}
+    .movement-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:12px 14px;border-top:1px solid #f0f1f3;align-items:center}
+    .movement-row:first-child{border-top:0}
+    .movement-main{min-width:0}
+    .movement-topline{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .movement-item{font-size:14px;font-weight:800;overflow-wrap:anywhere}
+    .movement-category{font-size:11px;color:var(--muted);margin-top:3px}
+    .movement-meta{font-size:11px;color:var(--muted);line-height:1.45;margin-top:5px}
+    .movement-side{text-align:right;white-space:nowrap}
+    .movement-time{font-size:10px;color:var(--muted);margin-top:4px}
+    .type{display:inline-block;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:850}
+    .type.in{color:var(--success);background:var(--success-soft)}
+    .type.out{color:var(--danger);background:var(--danger-soft)}
+    .qty.in{color:var(--success);font-size:17px;font-weight:900}
+    .qty.out{color:var(--danger);font-size:17px;font-weight:900}
+    @media (max-width:520px){
+      .filter-grid{grid-template-columns:1fr 1fr 1fr;gap:7px}
+      select{padding:10px 7px;font-size:12px}
+    }
+
+  
+    .movement-row{
+      display:block;
+      padding:12px 14px;
+      border-top:1px solid #f0f1f3;
+    }
+    .movement-row:first-child{border-top:0}
+    .movement-first{
+      display:flex;
+      align-items:center;
+      gap:7px;
+      flex-wrap:wrap;
+      margin-bottom:7px;
+    }
+    .movement-category{
+      font-size:12px;
+      font-weight:800;
+      color:#5b6370;
+      margin:0;
+    }
+    .movement-sep{
+      color:#a0a5ad;
+      font-size:11px;
+    }
+    .movement-item{
+      font-size:14px;
+      font-weight:850;
+      overflow-wrap:anywhere;
+    }
+    .movement-middle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:7px;
+    }
+    .movement-middle-left{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .movement-time{
+      font-size:10px;
+      color:var(--muted);
+      margin:0;
+    }
+    .movement-bottom{
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.5;
+      padding-top:7px;
+      border-top:1px dashed #eceef1;
+    }
+
   </style>
 </head>
 <body>
@@ -57,7 +134,10 @@
         <h1>出入庫紀錄</h1>
         <div class="sub">查詢每筆出庫與入庫異動</div>
       </div>
-      <button class="back-btn" id="backBtn">返回首頁</button>
+      <div class="top-actions">
+        <button class="export-top-btn" id="exportBtn" disabled>匯出 Excel</button>
+        <button class="back-btn" id="backBtn">返回首頁</button>
+      </div>
     </div>
 
     <section class="filter-card">
@@ -65,6 +145,7 @@
       <div class="filter-grid">
         <select id="yearSelect"></select>
         <select id="monthSelect"></select>
+        <select id="daySelect"></select>
       </div>
     </section>
 
@@ -73,17 +154,8 @@
       <div class="summary-meta" id="monthMeta">載入中…</div>
     </div>
 
-    <section class="table-card">
-      <div id="content" class="loading">正在讀取出入庫紀錄…</div>
-    </section>
+    <div id="content" class="loading">正在讀取出入庫紀錄…</div>
   </main>
-
-  <div class="export-wrap">
-    <div class="export-inner">
-      <button class="export-btn" id="exportBtn" disabled>匯出 Excel</button>
-    </div>
-  </div>
-
 <script>
 const SUPABASE_URL = "https://jtbmeajtjrxxqhtubtnq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_v0eeDGfyBeiO8khjE3jdUQ_HnfPY7Hd";
@@ -97,27 +169,72 @@ const $ = id => document.getElementById(id);
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
 function pad2(n){return String(n).padStart(2,"0");}
 function monthBounds(year,month){
-  const start=`${year}-${pad2(month)}-01T00:00:00`;
-  const ny=month===12?year+1:year;
-  const nm=month===12?1:month+1;
-  const end=`${ny}-${pad2(nm)}-01T00:00:00`;
+  const start=new Date(year,month-1,1,0,0,0,0).toISOString();
+  const end=new Date(month===12?year+1:year,month===12?0:month,1,0,0,0,0).toISOString();
   return {start,end};
+}
+function dayBounds(year,month,day){
+  const start=new Date(year,month-1,day,0,0,0,0).toISOString();
+  const end=new Date(year,month-1,day+1,0,0,0,0).toISOString();
+  return {start,end};
+}
+function dayKey(iso){
+  const d=new Date(iso);
+  const y=d.getFullYear();
+  const m=pad2(d.getMonth()+1);
+  const day=pad2(d.getDate());
+  return `${y}-${m}-${day}`;
+}
+function displayDay(isoDate){
+  const [y,m,d]=isoDate.split("-").map(Number);
+  const wd=["日","一","二","三","四","五","六"][new Date(y,m-1,d).getDay()];
+  return `${m}/${d}（${wd}）`;
+}
+function formatClock(iso){
+  const d=new Date(iso);
+  return d.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit",hour12:false});
 }
 function formatTime(iso){
   const d=new Date(iso);
   return d.toLocaleString("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
 }
 
+function updateDayOptions(){
+  const year=Number($("yearSelect").value);
+  const month=Number($("monthSelect").value);
+  const dayValue=$("daySelect").value;
+  const daySelect=$("daySelect");
+  const oldValue=daySelect.value || "all";
+  const daysInMonth=new Date(year,month,0).getDate();
+
+  daySelect.innerHTML='<option value="all">全部日期</option>';
+  for(let d=1;d<=daysInMonth;d++){
+    daySelect.insertAdjacentHTML("beforeend",`<option value="${d}">${d} 日</option>`);
+  }
+
+  if(oldValue!=="all" && Number(oldValue)<=daysInMonth){
+    daySelect.value=oldValue;
+  }else{
+    daySelect.value="all";
+  }
+}
+
 function initSelectors(){
   const now=new Date();
   const ysel=$("yearSelect"), msel=$("monthSelect");
   const y=now.getFullYear();
-  for(let n=y;n>=y-5;n--) ysel.insertAdjacentHTML("beforeend",`<option value="${n}">${n} 年</option>`);
-  for(let m=1;m<=12;m++) msel.insertAdjacentHTML("beforeend",`<option value="${m}">${m} 月</option>`);
+
+  for(let n=y;n>=y-5;n--){
+    ysel.insertAdjacentHTML("beforeend",`<option value="${n}">${n} 年</option>`);
+  }
+  for(let m=1;m<=12;m++){
+    msel.insertAdjacentHTML("beforeend",`<option value="${m}">${m} 月</option>`);
+  }
+
   ysel.value=String(y);
   msel.value=String(now.getMonth()+1);
+  updateDayOptions();
 }
-
 async function loadBase(){
   const [c,i]=await Promise.all([
     sb.from("categories").select("id,name,sort_order"),
@@ -128,18 +245,26 @@ async function loadBase(){
   items=i.data||[];
 }
 
-async function loadMonth(){
+async function loadRecords(){
   const year=Number($("yearSelect").value);
   const month=Number($("monthSelect").value);
-  const {start,end}=monthBounds(year,month);
+  const dayValue=$("daySelect").value;
+
+  const bounds = dayValue==="all"
+    ? monthBounds(year,month)
+    : dayBounds(year,month,Number(dayValue));
+
   $("content").innerHTML='<div class="loading">正在讀取出入庫紀錄…</div>';
   $("exportBtn").disabled=true;
-  $("monthTitle").textContent=`${year} 年 ${month} 月`;
+
+  $("monthTitle").textContent = dayValue==="all"
+    ? `${year} 年 ${month} 月`
+    : `${year} 年 ${month} 月 ${dayValue} 日`;
 
   const {data,error}=await sb.from("stock_movements")
     .select("id,item_id,category_id,movement_type,quantity,occurred_at,operator_name,note")
-    .gte("occurred_at",start)
-    .lt("occurred_at",end)
+    .gte("occurred_at",bounds.start)
+    .lt("occurred_at",bounds.end)
     .order("occurred_at",{ascending:false});
 
   if(error){
@@ -147,13 +272,13 @@ async function loadMonth(){
     $("monthMeta").textContent="讀取失敗";
     return;
   }
+
   movements=data||[];
   render();
 }
-
 function render(){
   if(!movements.length){
-    $("content").innerHTML='<div class="empty-state">這個月份目前沒有出入庫紀錄。</div>';
+    $("content").innerHTML='<div class="empty-state">這個查詢範圍目前沒有出入庫紀錄。</div>';
     $("monthMeta").textContent="0 筆紀錄";
     $("exportBtn").disabled=true;
     return;
@@ -161,47 +286,70 @@ function render(){
 
   const catMap=new Map(categories.map(c=>[Number(c.id),c]));
   const itemMap=new Map(items.map(i=>[Number(i.id),i]));
-  $("monthMeta").textContent=`${movements.length} 筆紀錄`;
-  $("exportBtn").disabled=false;
-
-  let html=`<div class="table-scroll"><table>
-    <thead><tr>
-      <th>時間</th>
-      <th>類別</th>
-      <th>品項</th>
-      <th>類型</th>
-      <th>數量</th>
-      <th>人員 / 備註</th>
-    </tr></thead><tbody>`;
+  const grouped=new Map();
 
   for(const mv of movements){
-    const item=itemMap.get(Number(mv.item_id));
-    const category=catMap.get(Number(mv.category_id)) || (item ? catMap.get(Number(item.category_id)) : null);
-    const isIn=mv.movement_type==="in";
-    const personNote=[
-      mv.operator_name ? `人員：${esc(mv.operator_name)}` : "",
-      mv.note ? `備註：${esc(mv.note)}` : ""
-    ].filter(Boolean).join("<br>") || "—";
-
-    html+=`<tr>
-      <td>${formatTime(mv.occurred_at)}</td>
-      <td>${esc(category?.name || "—")}</td>
-      <td>${esc(item?.name || `品項 #${mv.item_id}`)}</td>
-      <td><span class="type ${isIn?"in":"out"}">${isIn?"入庫":"出庫"}</span></td>
-      <td class="qty ${isIn?"in":"out"}">${isIn?"+":"−"}${esc(mv.quantity)}</td>
-      <td class="person-note">${personNote}</td>
-    </tr>`;
+    const key=dayKey(mv.occurred_at);
+    if(!grouped.has(key)) grouped.set(key,[]);
+    grouped.get(key).push(mv);
   }
 
-  html+=`</tbody></table></div>`;
+  const days=[...grouped.keys()].sort((a,b)=>b.localeCompare(a));
+  $("monthMeta").textContent=`${days.length} 天 · ${movements.length} 筆紀錄`;
+  $("exportBtn").disabled=false;
+
+  let html="";
+
+  for(const day of days){
+    const dayRows=grouped.get(day);
+
+    html+=`<section class="day-card">
+      <div class="day-head">
+        <div class="day-date">${displayDay(day)}</div>
+        <div class="day-count">${dayRows.length} 筆</div>
+      </div>`;
+
+    for(const mv of dayRows){
+      const item=itemMap.get(Number(mv.item_id));
+      const category=catMap.get(Number(mv.category_id)) || (item ? catMap.get(Number(item.category_id)) : null);
+      const isIn=mv.movement_type==="in";
+
+      const personText = mv.operator_name ? `人員：${esc(mv.operator_name)}` : "人員：—";
+      const noteText = mv.note ? `備註：${esc(mv.note)}` : "備註：—";
+
+      html+=`<div class="movement-row">
+        <div class="movement-first">
+          <span class="movement-category">${esc(category?.name || "未分類")}</span>
+          <span class="movement-sep">｜</span>
+          <span class="movement-item">${esc(item?.name || `品項 #${mv.item_id}`)}</span>
+        </div>
+
+        <div class="movement-middle">
+          <div class="movement-middle-left">
+            <span class="type ${isIn?"in":"out"}">${isIn?"入庫":"出庫"}</span>
+            <span class="movement-time">${formatClock(mv.occurred_at)}</span>
+          </div>
+          <div class="qty ${isIn?"in":"out"}">${isIn?"+":"−"}${esc(mv.quantity)}</div>
+        </div>
+
+        <div class="movement-bottom">
+          ${personText}<br>
+          ${noteText}
+        </div>
+      </div>`;
+    }
+
+    html+=`</section>`;
+  }
+
   $("content").innerHTML=html;
 }
-
 function exportExcel(){
   if(!movements.length) return;
 
   const year=Number($("yearSelect").value);
   const month=Number($("monthSelect").value);
+  const dayValue=$("daySelect").value;
   const catMap=new Map(categories.map(c=>[Number(c.id),c]));
   const itemMap=new Map(items.map(i=>[Number(i.id),i]));
 
@@ -223,19 +371,29 @@ function exportExcel(){
   ws["!cols"]=[{wch:20},{wch:16},{wch:28},{wch:10},{wch:10},{wch:14},{wch:30}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,`${year}-${pad2(month)}`);
-  XLSX.writeFile(wb,`出入庫紀錄_${year}-${pad2(month)}.xlsx`);
+  const suffix = dayValue==="all"
+    ? `${year}-${pad2(month)}`
+    : `${year}-${pad2(month)}-${pad2(dayValue)}`;
+  XLSX.writeFile(wb,`出入庫紀錄_${suffix}.xlsx`);
 }
 
 $("backBtn").addEventListener("click",()=>window.location.href="index.html");
-$("yearSelect").addEventListener("change",loadMonth);
-$("monthSelect").addEventListener("change",loadMonth);
+$("yearSelect").addEventListener("change",()=>{
+  updateDayOptions();
+  loadRecords();
+});
+$("monthSelect").addEventListener("change",()=>{
+  updateDayOptions();
+  loadRecords();
+});
+$("daySelect").addEventListener("change",loadRecords);
 $("exportBtn").addEventListener("click",exportExcel);
 
 (async function(){
   try{
     initSelectors();
     await loadBase();
-    await loadMonth();
+    await loadRecords();
   }catch(error){
     $("content").innerHTML=`<div class="empty-state">載入失敗：${esc(error.message)}</div>`;
     $("monthMeta").textContent="載入失敗";
