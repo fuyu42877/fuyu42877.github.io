@@ -154,6 +154,8 @@
     .date-status{display:block;font-size:9px;line-height:1.15;margin-top:3px;font-weight:850}
     .date-status.pending{color:var(--danger)}
     .date-status.done{color:var(--success)}
+    .actual-today-tag{display:block;font-size:8px;color:var(--success);font-weight:800;margin-top:3px}
+    .theory-today-tag{display:block;font-size:8px;color:var(--muted);font-weight:700;margin-top:3px}
     .menu-grid{display:grid;grid-template-columns:1fr;gap:9px}
     .menu-choice{width:100%;border:1px solid var(--line);background:#fff;border-radius:13px;padding:13px 14px;text-align:left;font-weight:800;color:#333;box-shadow:var(--shadow-soft)}
     .menu-choice small{display:block;margin-top:3px;font-size:11px;color:var(--muted);font-weight:500}
@@ -168,7 +170,7 @@
   <main class="app">
     <div class="top">
       <div>
-        <h1>加工肉品庫存清點紀錄</h1>
+        <h1>庫存清點紀錄</h1>
         <div class="sub" id="lastUpdated">載入中…</div>
       </div>
       <button class="icon-btn" id="refreshBtn">重新整理</button>
@@ -363,9 +365,12 @@ async function loadAll(showLoading = true) {
 
     currentQuantityMap = new Map();
     for (const item of items) {
-      const baseRecord = todayComplete
-        ? getTodayRecord(item.id)
-        : getLatestActualBefore(item.id, today);
+      const todayRecord = getTodayRecord(item.id);
+
+      // 分批清點時：
+      // 已經清點過的品項，用今天實際清點值當基準；
+      // 尚未清點的品項，才繼續顯示上次實際清點推算出的理論庫存。
+      const baseRecord = todayRecord || getLatestActualBefore(item.id, today);
 
       currentQuantityMap.set(
         Number(item.id),
@@ -467,14 +472,17 @@ function render() {
       const qtyText = currentQty === null || currentQty === undefined ? "—" : esc(currentQty);
 
       let clickAction = "";
-      if (todayComplete) {
-        const todayRecord = getTodayRecord(item.id);
-        if (todayRecord) clickAction = `onclick="openEditRecord(${todayRecord.id})"`;
+      const todayRecord = getTodayRecord(item.id);
+      if (todayRecord) {
+        clickAction = `onclick="openEditRecord(${todayRecord.id})"`;
       }
 
       html += `<td class="latest-cell">
         <button class="cell-btn has ${isLowStock ? "low-stock" : ""}" ${clickAction}>
           ${qtyText}
+          ${todayRecord
+            ? '<span class="actual-today-tag">實際</span>'
+            : '<span class="theory-today-tag">理論</span>'}
           ${isLowStock ? '<span class="low-tag">低庫存</span>' : ''}
         </button>
       </td>`;
