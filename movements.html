@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7f9" />
+  <title>出入庫紀錄</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f6f8;--card:#fff;--text:#15171a;--muted:#7b8189;--line:#e7e9ee;
+      --primary:#2f6fe4;--danger:#d1242f;--success:#18864b;
+      --danger-soft:#fff2f3;--success-soft:#eef9f2;
+      --shadow:0 8px 24px rgba(17,24,39,.055);--shadow-soft:0 3px 12px rgba(17,24,39,.04);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:linear-gradient(180deg,#f8fafc 0,#f4f6f8 180px);color:var(--text);-webkit-font-smoothing:antialiased}
+    button,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:860px;margin:auto;padding:18px 14px 110px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h1{font-size:24px;letter-spacing:-.4px;margin:0 0 5px}
+    .sub{font-size:13px;color:var(--muted)}
+    .back-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 10px;color:var(--primary);font-size:13px;font-weight:750;box-shadow:var(--shadow-soft)}
+    .filter-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:14px;box-shadow:var(--shadow);margin-bottom:13px}
+    .filter-title{font-size:13px;font-weight:800;margin-bottom:9px}
+    .filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    select{width:100%;border:1px solid #d9dce1;border-radius:12px;padding:11px;background:#fff;outline:none}
+    .summary{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 1px 12px}
+    .summary-title{font-size:14px;font-weight:850}
+    .summary-meta{font-size:12px;color:var(--muted)}
+    .table-card{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow);overflow:hidden}
+    .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0}
+    th,td{padding:10px 9px;border-bottom:1px solid var(--line);border-right:1px solid #f0f1f3;white-space:nowrap;font-size:12px;text-align:left;background:#fff}
+    th{background:#fafbfc;color:#59616d;font-weight:800;position:sticky;top:0;z-index:1}
+    th:last-child,td:last-child{border-right:0}
+    tr:last-child td{border-bottom:0}
+    .type{display:inline-block;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:850}
+    .type.in{color:var(--success);background:var(--success-soft)}
+    .type.out{color:var(--danger);background:var(--danger-soft)}
+    .qty.in{color:var(--success);font-weight:850}
+    .qty.out{color:var(--danger);font-weight:850}
+    .person-note{min-width:150px;max-width:240px;white-space:normal;line-height:1.4}
+    .empty-state,.loading{padding:32px 16px;text-align:center;color:var(--muted)}
+    .export-wrap{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(244,246,248,.92);backdrop-filter:blur(12px);border-top:1px solid rgba(231,233,238,.9)}
+    .export-inner{max-width:860px;margin:auto}
+    .export-btn{width:100%;border:0;border-radius:14px;padding:13px 14px;background:var(--primary);color:#fff;font-weight:820;box-shadow:0 7px 16px rgba(47,111,228,.20)}
+    .export-btn:disabled{opacity:.5}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="top">
+      <div>
+        <h1>出入庫紀錄</h1>
+        <div class="sub">查詢每筆出庫與入庫異動</div>
+      </div>
+      <button class="back-btn" id="backBtn">返回首頁</button>
+    </div>
+
+    <section class="filter-card">
+      <div class="filter-title">選擇月份</div>
+      <div class="filter-grid">
+        <select id="yearSelect"></select>
+        <select id="monthSelect"></select>
+      </div>
+    </section>
+
+    <div class="summary">
+      <div class="summary-title" id="monthTitle">—</div>
+      <div class="summary-meta" id="monthMeta">載入中…</div>
+    </div>
+
+    <section class="table-card">
+      <div id="content" class="loading">正在讀取出入庫紀錄…</div>
+    </section>
+  </main>
+
+  <div class="export-wrap">
+    <div class="export-inner">
+      <button class="export-btn" id="exportBtn" disabled>匯出 Excel</button>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = "https://jtbmeajtjrxxqhtubtnq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_v0eeDGfyBeiO8khjE3jdUQ_HnfPY7Hd";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let categories = [];
+let items = [];
+let movements = [];
+
+const $ = id => document.getElementById(id);
+function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function pad2(n){return String(n).padStart(2,"0");}
+function monthBounds(year,month){
+  const start=`${year}-${pad2(month)}-01T00:00:00`;
+  const ny=month===12?year+1:year;
+  const nm=month===12?1:month+1;
+  const end=`${ny}-${pad2(nm)}-01T00:00:00`;
+  return {start,end};
+}
+function formatTime(iso){
+  const d=new Date(iso);
+  return d.toLocaleString("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+}
+
+function initSelectors(){
+  const now=new Date();
+  const ysel=$("yearSelect"), msel=$("monthSelect");
+  const y=now.getFullYear();
+  for(let n=y;n>=y-5;n--) ysel.insertAdjacentHTML("beforeend",`<option value="${n}">${n} 年</option>`);
+  for(let m=1;m<=12;m++) msel.insertAdjacentHTML("beforeend",`<option value="${m}">${m} 月</option>`);
+  ysel.value=String(y);
+  msel.value=String(now.getMonth()+1);
+}
+
+async function loadBase(){
+  const [c,i]=await Promise.all([
+    sb.from("categories").select("id,name,sort_order"),
+    sb.from("items").select("id,name,category_id,sort_order")
+  ]);
+  if(c.error||i.error) throw (c.error||i.error);
+  categories=c.data||[];
+  items=i.data||[];
+}
+
+async function loadMonth(){
+  const year=Number($("yearSelect").value);
+  const month=Number($("monthSelect").value);
+  const {start,end}=monthBounds(year,month);
+  $("content").innerHTML='<div class="loading">正在讀取出入庫紀錄…</div>';
+  $("exportBtn").disabled=true;
+  $("monthTitle").textContent=`${year} 年 ${month} 月`;
+
+  const {data,error}=await sb.from("stock_movements")
+    .select("id,item_id,category_id,movement_type,quantity,occurred_at,operator_name,note")
+    .gte("occurred_at",start)
+    .lt("occurred_at",end)
+    .order("occurred_at",{ascending:false});
+
+  if(error){
+    $("content").innerHTML=`<div class="empty-state">讀取失敗：${esc(error.message)}</div>`;
+    $("monthMeta").textContent="讀取失敗";
+    return;
+  }
+  movements=data||[];
+  render();
+}
+
+function render(){
+  if(!movements.length){
+    $("content").innerHTML='<div class="empty-state">這個月份目前沒有出入庫紀錄。</div>';
+    $("monthMeta").textContent="0 筆紀錄";
+    $("exportBtn").disabled=true;
+    return;
+  }
+
+  const catMap=new Map(categories.map(c=>[Number(c.id),c]));
+  const itemMap=new Map(items.map(i=>[Number(i.id),i]));
+  $("monthMeta").textContent=`${movements.length} 筆紀錄`;
+  $("exportBtn").disabled=false;
+
+  let html=`<div class="table-scroll"><table>
+    <thead><tr>
+      <th>時間</th>
+      <th>類別</th>
+      <th>品項</th>
+      <th>類型</th>
+      <th>數量</th>
+      <th>人員 / 備註</th>
+    </tr></thead><tbody>`;
+
+  for(const mv of movements){
+    const item=itemMap.get(Number(mv.item_id));
+    const category=catMap.get(Number(mv.category_id)) || (item ? catMap.get(Number(item.category_id)) : null);
+    const isIn=mv.movement_type==="in";
+    const personNote=[
+      mv.operator_name ? `人員：${esc(mv.operator_name)}` : "",
+      mv.note ? `備註：${esc(mv.note)}` : ""
+    ].filter(Boolean).join("<br>") || "—";
+
+    html+=`<tr>
+      <td>${formatTime(mv.occurred_at)}</td>
+      <td>${esc(category?.name || "—")}</td>
+      <td>${esc(item?.name || `品項 #${mv.item_id}`)}</td>
+      <td><span class="type ${isIn?"in":"out"}">${isIn?"入庫":"出庫"}</span></td>
+      <td class="qty ${isIn?"in":"out"}">${isIn?"+":"−"}${esc(mv.quantity)}</td>
+      <td class="person-note">${personNote}</td>
+    </tr>`;
+  }
+
+  html+=`</tbody></table></div>`;
+  $("content").innerHTML=html;
+}
+
+function exportExcel(){
+  if(!movements.length) return;
+
+  const year=Number($("yearSelect").value);
+  const month=Number($("monthSelect").value);
+  const catMap=new Map(categories.map(c=>[Number(c.id),c]));
+  const itemMap=new Map(items.map(i=>[Number(i.id),i]));
+
+  const rows=movements.map(mv=>{
+    const item=itemMap.get(Number(mv.item_id));
+    const category=catMap.get(Number(mv.category_id)) || (item ? catMap.get(Number(item.category_id)) : null);
+    return {
+      "時間":formatTime(mv.occurred_at),
+      "類別":category?.name||"",
+      "品項":item?.name||`品項 #${mv.item_id}`,
+      "類型":mv.movement_type==="in"?"入庫":"出庫",
+      "數量":mv.quantity,
+      "人員":mv.operator_name||"",
+      "備註":mv.note||""
+    };
+  });
+
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws["!cols"]=[{wch:20},{wch:16},{wch:28},{wch:10},{wch:10},{wch:14},{wch:30}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,`${year}-${pad2(month)}`);
+  XLSX.writeFile(wb,`出入庫紀錄_${year}-${pad2(month)}.xlsx`);
+}
+
+$("backBtn").addEventListener("click",()=>window.location.href="index.html");
+$("yearSelect").addEventListener("change",loadMonth);
+$("monthSelect").addEventListener("change",loadMonth);
+$("exportBtn").addEventListener("click",exportExcel);
+
+(async function(){
+  try{
+    initSelectors();
+    await loadBase();
+    await loadMonth();
+  }catch(error){
+    $("content").innerHTML=`<div class="empty-state">載入失敗：${esc(error.message)}</div>`;
+    $("monthMeta").textContent="載入失敗";
+  }
+})();
+</script>
+</body>
+</html>

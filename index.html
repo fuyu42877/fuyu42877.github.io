@@ -49,7 +49,7 @@
       white-space:nowrap;
     }
 
-    .dashboard{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 12px}
+    .dashboard{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0 12px}
     .dashboard-card{border:1px solid var(--line);background:rgba(255,255,255,.95);border-radius:16px;padding:14px;text-align:left;box-shadow:var(--shadow);min-height:102px;transition:.15s}
     .dashboard-label{font-size:12px;font-weight:750;color:var(--muted);margin-bottom:7px}
     .dashboard-value{font-size:25px;line-height:1;font-weight:850;letter-spacing:-.5px;color:var(--text)}
@@ -148,6 +148,18 @@
       th:first-child,td:first-child{width:40%}
       th:not(:first-child),td:not(:first-child){width:20%}
     }
+  
+    .date-status{display:block;font-size:9px;line-height:1.15;margin-top:3px;font-weight:850}
+    .date-status.pending{color:var(--danger)}
+    .date-status.done{color:var(--success)}
+    .menu-grid{display:grid;grid-template-columns:1fr;gap:9px}
+    .menu-choice{width:100%;border:1px solid var(--line);background:#fff;border-radius:13px;padding:13px 14px;text-align:left;font-weight:800;color:#333;box-shadow:var(--shadow-soft)}
+    .menu-choice small{display:block;margin-top:3px;font-size:11px;color:var(--muted);font-weight:500}
+    .movement-type-in{color:var(--success)}
+    .movement-type-out{color:var(--danger)}
+    .theory-btn{width:100%;border:1px solid #d7e2fb;background:#f7faff;border-radius:9px;padding:6px 4px;color:var(--primary);font-size:12px;font-weight:850;line-height:1.2}
+    .theory-btn:disabled{opacity:.38;color:#777;background:#f4f4f4;border-color:#e5e5e5}
+
   </style>
 </head>
 <body>
@@ -157,27 +169,17 @@
         <h1>庫存清點紀錄</h1>
         <div class="sub" id="lastUpdated">載入中…</div>
       </div>
-      <div class="top-actions">
-        <button class="history-btn" id="historyBtn">歷史紀錄</button>
-        <button class="icon-btn" id="refreshBtn">重新整理</button>
-      </div>
+      <button class="icon-btn" id="refreshBtn">重新整理</button>
     </div>
 
     <div class="actions">
       <button class="btn primary" id="dailyBtn">每日清點</button>
-      <button class="btn secondary" id="addCategoryBtn">新增類別</button>
-      <button class="btn secondary" id="addItemBtn">新增品項</button>
-      <button class="btn secondary" id="sortBtn">排序</button>
+      <button class="btn secondary" id="manageBtn">新增</button>
+      <button class="btn secondary" id="movementBtn">出/入庫</button>
+      <button class="btn secondary" id="recordsBtn">歷史紀錄</button>
     </div>
 
     <div class="dashboard">
-      <button class="dashboard-card" id="todayCard" type="button">
-        <span class="dashboard-arrow">前往 ›</span>
-        <div class="dashboard-label">今日清點</div>
-        <div class="dashboard-value" id="todayProgressValue">0 / 0</div>
-        <div class="dashboard-sub" id="todayProgressSub">尚未開始清點</div>
-      </button>
-
       <button class="dashboard-card" id="lowStockCard" type="button">
         <span class="dashboard-arrow" id="lowStockArrow">查看 ›</span>
         <div class="dashboard-label">低庫存預警</div>
@@ -210,6 +212,10 @@ let records = [];
 let dateKeys = [];
 let dateLabels = [];
 let lowStockOnly = false;
+let stockMovements = [];
+let previousActualDates = [];
+let todayComplete = false;
+let currentQuantityMap = new Map();
 let previewCategories = [];
 let previewItems = [];
 
@@ -237,6 +243,56 @@ function getRecentDates() {
   }
   return { keys, labels };
 }
+
+async function fetchAllRows(builderFactory, pageSize = 1000) {
+  let from = 0;
+  const all = [];
+  while (true) {
+    const { data, error } = await builderFactory().range(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = data || [];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+function endOfSelectedDateISO(dateStr) {
+  const [y,m,d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+}
+
+function quantityFromBaseAndMovements(itemId, baseRecord, cutoffISO = new Date().toISOString()) {
+  if (!baseRecord || baseRecord.quantity === null || baseRecord.quantity === undefined) return null;
+  const baseTime = new Date(baseRecord.created_at).getTime();
+  const cutoff = new Date(cutoffISO).getTime();
+  let qty = Number(baseRecord.quantity);
+
+  for (const mv of stockMovements) {
+    if (Number(mv.item_id) !== Number(itemId)) continue;
+    const t = new Date(mv.occurred_at).getTime();
+    if (!(t > baseTime && t <= cutoff)) continue;
+    qty += mv.movement_type === "in" ? Number(mv.quantity) : -Number(mv.quantity);
+  }
+  return qty;
+}
+
+function getLatestActualBefore(itemId, dateStr) {
+  return records
+    .filter(r => Number(r.item_id) === Number(itemId) && r.record_date < dateStr)
+    .sort((a,b) => {
+      const d = b.record_date.localeCompare(a.record_date);
+      if (d !== 0) return d;
+      return new Date(b.created_at) - new Date(a.created_at);
+    })[0] || null;
+}
+
+function getTodayRecord(itemId) {
+  const today = localISODate();
+  return records.find(r => Number(r.item_id) === Number(itemId) && r.record_date === today) || null;
+}
+
 function esc(v="") {
   return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 }
@@ -261,139 +317,112 @@ $("modalBackdrop").addEventListener("click", e => {
 async function loadAll(showLoading = true) {
   if (showLoading) $("content").innerHTML = '<div class="loading">正在讀取庫存資料…</div>';
 
-  const [catRes, itemRes, dateRes] = await Promise.all([
-    sb.from("categories").select("id,name,sort_order,created_at").order("sort_order", { ascending:true }).order("id", { ascending:true }),
-    sb.from("items").select("id,name,category_id,warning_threshold,sort_order,created_at").order("sort_order", { ascending:true }).order("id", { ascending:true }),
-    sb.from("inventory_records").select("record_date").order("record_date", { ascending:false })
-  ]);
+  try {
+    const [catRes, itemRes] = await Promise.all([
+      sb.from("categories").select("id,name,sort_order,created_at")
+        .order("sort_order",{ascending:true}).order("id",{ascending:true}),
+      sb.from("items").select("id,name,category_id,warning_threshold,sort_order,created_at")
+        .order("sort_order",{ascending:true}).order("id",{ascending:true})
+    ]);
 
-  const firstError = catRes.error || itemRes.error || dateRes.error;
-  if (firstError) {
-    $("content").innerHTML = `<div class="empty-state">讀取失敗：${esc(firstError.message)}</div>`;
-    return;
-  }
+    const firstError = catRes.error || itemRes.error;
+    if (firstError) throw firstError;
 
-  categories = catRes.data || [];
-  items = itemRes.data || [];
+    categories = catRes.data || [];
+    items = itemRes.data || [];
 
-  const uniqueDates = [];
-  for (const row of (dateRes.data || [])) {
-    if (row.record_date && !uniqueDates.includes(row.record_date)) {
-      uniqueDates.push(row.record_date);
-      if (uniqueDates.length === 3) break;
+    records = await fetchAllRows(() =>
+      sb.from("inventory_records")
+        .select("id,item_id,record_date,quantity,note,created_at")
+        .order("record_date",{ascending:false})
+        .order("created_at",{ascending:false})
+    );
+
+    stockMovements = await fetchAllRows(() =>
+      sb.from("stock_movements")
+        .select("id,item_id,category_id,movement_type,quantity,occurred_at,operator_name,note,created_at")
+        .order("occurred_at",{ascending:false})
+    );
+
+    const today = localISODate();
+
+    previousActualDates = [...new Set(
+      records.filter(r => r.record_date < today).map(r => r.record_date)
+    )].sort((a,b) => b.localeCompare(a)).slice(0,2).reverse();
+
+    const todayRows = records.filter(r => r.record_date === today);
+    const todayItemIds = new Set(todayRows.map(r => Number(r.item_id)));
+    todayComplete = items.length > 0 && items.every(item => todayItemIds.has(Number(item.id)));
+
+    dateKeys = [...previousActualDates, today];
+    dateLabels = dateKeys.map(labelDate);
+
+    currentQuantityMap = new Map();
+    for (const item of items) {
+      const baseRecord = todayComplete
+        ? getTodayRecord(item.id)
+        : getLatestActualBefore(item.id, today);
+
+      currentQuantityMap.set(
+        Number(item.id),
+        quantityFromBaseAndMovements(item.id, baseRecord, new Date().toISOString())
+      );
     }
+
+    render();
+    $("lastUpdated").textContent =
+      `即時庫存 · 更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
+
+  } catch (error) {
+    $("content").innerHTML = `<div class="empty-state">讀取失敗：${esc(error.message)}</div>`;
   }
-
-  dateKeys = uniqueDates.slice().reverse();
-  dateLabels = dateKeys.map(labelDate);
-
-  if (dateKeys.length) {
-    const recRes = await sb.from("inventory_records")
-      .select("id,item_id,record_date,quantity,note,created_at")
-      .in("record_date", dateKeys)
-      .order("record_date");
-
-    if (recRes.error) {
-      $("content").innerHTML = `<div class="empty-state">讀取失敗：${esc(recRes.error.message)}</div>`;
-      return;
-    }
-    records = recRes.data || [];
-  } else {
-    records = [];
-  }
-
-  render();
-  $("lastUpdated").textContent = dateKeys.length
-    ? `最近 ${dateKeys.length} 次清點 · 更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`
-    : `尚無清點紀錄 · 更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
 }
-
 function getLatestLowStockItemIds() {
-  const latestDate = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
-  if (!latestDate) return new Set();
-
-  const latestMap = new Map(
-    records
-      .filter(r => r.record_date === latestDate)
-      .map(r => [r.item_id, r])
-  );
-
   const ids = new Set();
-
   for (const item of items) {
-    const r = latestMap.get(item.id);
-
+    const qty = currentQuantityMap.get(Number(item.id));
     if (
-      r &&
-      r.quantity !== null &&
-      item.warning_threshold !== null &&
-      item.warning_threshold !== undefined &&
-      Number(r.quantity) < Number(item.warning_threshold)
+      qty !== null && qty !== undefined &&
+      item.warning_threshold !== null && item.warning_threshold !== undefined &&
+      Number(qty) < Number(item.warning_threshold)
     ) {
-      ids.add(item.id);
+      ids.add(Number(item.id));
     }
   }
-
   return ids;
 }
-
 function updateDashboard() {
   const today = localISODate();
-  const todayDone = new Set(
-    records
-      .filter(r => r.record_date === today && r.quantity !== null)
-      .map(r => r.item_id)
-  ).size;
-
-  const total = items.length;
-  const todayCard = $("todayCard");
-  $("todayProgressValue").textContent = `${todayDone} / ${total}`;
-  $("todayProgressSub").textContent =
-    total > 0 && todayDone === total
-      ? "今日清點完成"
-      : todayDone > 0
-        ? `尚有 ${Math.max(total - todayDone, 0)} 項未填`
-        : "尚未開始清點";
-
-  todayCard.classList.toggle("done", total > 0 && todayDone === total);
-
-  const latestDate = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
   const lowIds = getLatestLowStockItemIds();
   const lowCard = $("lowStockCard");
 
   $("lowStockValue").textContent = `${lowIds.size} 項`;
-  $("lowStockSub").textContent = latestDate
-    ? `依 ${labelDate(latestDate)} 清點結果`
-    : "目前尚無清點紀錄";
+  $("lowStockSub").textContent = todayComplete
+    ? `${labelDate(today)} 已清點後的即時庫存`
+    : `${labelDate(today)} 未清點的理論庫存`;
   $("lowStockArrow").textContent = lowStockOnly ? "顯示全部 ›" : "查看 ›";
-
   lowCard.classList.toggle("alert", lowIds.size > 0);
 }
-
 function render() {
   const q = $("searchInput").value.trim().toLowerCase();
   const lowIds = getLatestLowStockItemIds();
+  const today = localISODate();
 
   let matchedItems = items.filter(i => i.name.toLowerCase().includes(q));
-
-  if (lowStockOnly) {
-    matchedItems = matchedItems.filter(i => lowIds.has(i.id));
-  }
+  if (lowStockOnly) matchedItems = matchedItems.filter(i => lowIds.has(Number(i.id)));
 
   updateDashboard();
 
   if (!categories.length) {
-    $("content").innerHTML = '<div class="empty-state">尚未建立類別。請先點「新增類別」。</div>';
+    $("content").innerHTML = '<div class="empty-state">尚未建立類別。</div>';
     return;
   }
 
   const recMap = new Map(records.map(r => [`${r.item_id}|${r.record_date}`, r]));
-  const latestDate = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
   let html = "";
 
   for (const c of categories) {
     const catItems = matchedItems.filter(i => i.category_id === c.id);
-
     if (!catItems.length && (q || lowStockOnly)) continue;
 
     html += `<section class="category">
@@ -404,33 +433,48 @@ function render() {
       continue;
     }
 
-    if (!dateKeys.length) {
-      html += `<div class="empty-state">目前還沒有清點紀錄</div></section>`;
-      continue;
-    }
+    const headers = previousActualDates.map(d => `<th>${labelDate(d)}</th>`).join("");
+    const todayStatus = todayComplete
+      ? `<span class="date-status done">（已清點）</span>`
+      : `<span class="date-status pending">（未清點）</span>`;
 
     html += `<table>
-      <thead><tr><th>品項</th>${dateKeys.map(d =>
-        `<th class="${d===latestDate?'latest-head':''}">${labelDate(d)}</th>`
-      ).join("")}</tr></thead><tbody>`;
+      <thead><tr>
+        <th>品項</th>
+        ${headers}
+        <th class="latest-head">${labelDate(today)}${todayStatus}</th>
+      </tr></thead><tbody>`;
 
     for (const item of catItems) {
       html += `<tr><td><button class="item-name-btn" onclick="openEditItem(${item.id})">${esc(item.name)}</button></td>`;
 
-      for (const d of dateKeys) {
+      for (const d of previousActualDates) {
         const r = recMap.get(`${item.id}|${d}`);
-        const latestClass = d === latestDate ? "latest-cell" : "";
-
         if (r) {
           const qty = r.quantity === null ? "—" : esc(r.quantity);
           const note = r.note ? `<span class="note">${esc(r.note)}</span>` : "";
-          const isLowStock = d === latestDate && lowIds.has(item.id);
-
-          html += `<td class="${latestClass}"><button class="cell-btn has ${isLowStock ? "low-stock" : ""}" onclick="openEditRecord(${r.id})">${qty}${isLowStock ? '<span class="low-tag">低庫存</span>' : ''}${note}</button></td>`;
+          html += `<td><button class="cell-btn has" onclick="openEditRecord(${r.id})">${qty}${note}</button></td>`;
         } else {
-          html += `<td class="${latestClass}"><span class="empty">—</span></td>`;
+          html += `<td><span class="empty">—</span></td>`;
         }
       }
+
+      const currentQty = currentQuantityMap.get(Number(item.id));
+      const isLowStock = lowIds.has(Number(item.id));
+      const qtyText = currentQty === null || currentQty === undefined ? "—" : esc(currentQty);
+
+      let clickAction = "";
+      if (todayComplete) {
+        const todayRecord = getTodayRecord(item.id);
+        if (todayRecord) clickAction = `onclick="openEditRecord(${todayRecord.id})"`;
+      }
+
+      html += `<td class="latest-cell">
+        <button class="cell-btn has ${isLowStock ? "low-stock" : ""}" ${clickAction}>
+          ${qtyText}
+          ${isLowStock ? '<span class="low-tag">低庫存</span>' : ''}
+        </button>
+      </td>`;
 
       html += `</tr>`;
     }
@@ -438,18 +482,120 @@ function render() {
     html += `</tbody></table></section>`;
   }
 
-  if (!html) {
-    $("content").innerHTML = lowStockOnly
+  $("content").innerHTML = html || (
+    lowStockOnly
       ? '<div class="empty-state">目前沒有符合條件的預警品項。</div>'
-      : '<div class="empty-state">找不到符合的品項。</div>';
-    return;
-  }
-
-  $("content").innerHTML = html;
+      : '<div class="empty-state">找不到符合的品項。</div>'
+  );
 }
 function modalHeader(title) {
   return `<div class="modal-head"><h2>${title}</h2><button class="close" onclick="closeModal()">✕</button></div>`;
 }
+
+
+function openManageMenu() {
+  showModal(`${modalHeader("新增")}
+    <div class="menu-grid">
+      <button class="menu-choice" onclick="openAddCategory()">新增類別<small>建立新的品項分類</small></button>
+      <button class="menu-choice" onclick="openAddItem()">新增品項<small>新增品項並設定類別與預警值</small></button>
+      <button class="menu-choice" onclick="openSortManager()">排序<small>調整類別與品項顯示順序</small></button>
+    </div>`);
+}
+
+function openMovementMenu() {
+  showModal(`${modalHeader("出 / 入庫")}
+    <div class="menu-grid">
+      <button class="menu-choice movement-type-out" onclick="openMovementForm('out')">出庫<small>記錄品項離開庫存</small></button>
+      <button class="menu-choice movement-type-in" onclick="openMovementForm('in')">入庫<small>記錄品項增加庫存</small></button>
+    </div>`);
+}
+
+function openRecordsMenu() {
+  showModal(`${modalHeader("歷史紀錄")}
+    <div class="menu-grid">
+      <button class="menu-choice" onclick="window.location.href='history.html'">清點紀錄<small>依年月查看歷史實際清點</small></button>
+      <button class="menu-choice" onclick="window.location.href='movements.html'">出入庫紀錄<small>查詢出庫、入庫、人員與備註</small></button>
+    </div>`);
+}
+
+function movementItemOptions(categoryId) {
+  return items
+    .filter(item => Number(item.category_id) === Number(categoryId))
+    .map(item => `<option value="${item.id}">${esc(item.name)}</option>`)
+    .join("");
+}
+
+function refreshMovementItems() {
+  const categoryId = Number($("movementCategory").value);
+  $("movementItem").innerHTML = movementItemOptions(categoryId);
+}
+
+function openMovementForm(type) {
+  if (!categories.length || !items.length) return toast("目前沒有可操作的品項");
+
+  const firstCategoryWithItems = categories.find(c =>
+    items.some(i => Number(i.category_id) === Number(c.id))
+  );
+  if (!firstCategoryWithItems) return toast("目前沒有可操作的品項");
+
+  const isIn = type === "in";
+  const title = isIn ? "入庫" : "出庫";
+
+  showModal(`${modalHeader(title)}
+    <label>類別</label>
+    <select id="movementCategory" onchange="refreshMovementItems()">
+      ${categories
+        .filter(c => items.some(i => Number(i.category_id) === Number(c.id)))
+        .map(c => `<option value="${c.id}" ${c.id === firstCategoryWithItems.id ? "selected" : ""}>${esc(c.name)}</option>`)
+        .join("")}
+    </select>
+
+    <label>品項</label>
+    <select id="movementItem">${movementItemOptions(firstCategoryWithItems.id)}</select>
+
+    <label>數量</label>
+    <input id="movementQuantity" type="number" inputmode="numeric" min="1" step="1" placeholder="請輸入數量">
+
+    <label>人員（選填）</label>
+    <input id="movementOperator" placeholder="請輸入人員">
+
+    <label>備註（選填）</label>
+    <textarea id="movementNote" placeholder="請輸入備註"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="submitMovement('${type}')">確認${title}</button>
+    </div>`);
+}
+
+async function submitMovement(type) {
+  const categoryId = Number($("movementCategory").value);
+  const itemId = Number($("movementItem").value);
+  const quantity = Number($("movementQuantity").value);
+  const operatorName = $("movementOperator").value.trim() || null;
+  const note = $("movementNote").value.trim() || null;
+
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    return toast("數量必須是 1 以上整數");
+  }
+
+  const { error } = await sb.from("stock_movements").insert({
+    item_id: itemId,
+    category_id: categoryId,
+    movement_type: type,
+    quantity,
+    operator_name: operatorName,
+    note,
+    occurred_at: new Date().toISOString()
+  });
+
+  if (error) return toast("儲存失敗：" + error.message);
+
+  closeModal();
+  toast(type === "in" ? "入庫完成" : "出庫完成");
+  await loadAll(false);
+}
+
 
 function openAddCategory() {
   showModal(`${modalHeader("新增類別")}
@@ -515,7 +661,7 @@ async function openDailyCount() {
   showModal(`${modalHeader("每日清點")}
     <div class="date-box">
       <label>清點日期</label>
-      <input id="countDate" type="date" value="${localISODate()}" onchange="loadDailyRows()">
+      <input id="countDate" type="date" value="${localISODate()}" max="${localISODate()}" onchange="loadDailyRows()">
     </div>
 
     <div class="progress-box" id="dailyProgressBox">
@@ -547,16 +693,23 @@ async function loadDailyRows() {
   const selectedDate = dateInput.value;
   holder.innerHTML = '<div class="loading">正在讀取該日紀錄…</div>';
 
-  const { data, error } = await sb.from("inventory_records")
-    .select("id,item_id,record_date,quantity,note")
-    .eq("record_date", selectedDate);
+  const existingRows = records.filter(r => r.record_date === selectedDate);
+  const existingMap = new Map(existingRows.map(r => [Number(r.item_id), r]));
 
-  if (error) {
-    holder.innerHTML = `<div class="empty-state">讀取失敗：${esc(error.message)}</div>`;
-    return;
+  const cutoffISO = selectedDate === localISODate()
+    ? new Date().toISOString()
+    : endOfSelectedDateISO(selectedDate);
+
+  const theoryMap = new Map();
+
+  for (const item of items) {
+    const base = getLatestActualBefore(item.id, selectedDate);
+    theoryMap.set(
+      Number(item.id),
+      quantityFromBaseAndMovements(item.id, base, cutoffISO)
+    );
   }
 
-  const existingMap = new Map((data || []).map(r => [r.item_id, r]));
   let rows = "";
 
   for (const c of categories) {
@@ -564,18 +717,26 @@ async function loadDailyRows() {
     if (!catItems.length) continue;
 
     rows += `<div class="section-label">${esc(c.name)}</div>`;
+
     for (const i of catItems) {
-      const existing = existingMap.get(i.id);
+      const existing = existingMap.get(Number(i.id));
+      const theoryQty = theoryMap.get(Number(i.id));
+      const hasTheory = theoryQty !== null && theoryQty !== undefined;
+
       rows += `<div class="count-row">
         <div>
           <div class="item-name">${esc(i.name)}</div>
           ${existing ? `<div class="already">此日已清點：${existing.quantity ?? "—"}${existing.note ? "｜"+esc(existing.note) : ""}</div>` : ""}
         </div>
+
         ${existing
           ? `<div class="count-control"><input value="${existing.quantity ?? ""}" disabled></div>`
           : `<div class="count-control">
-               <button class="copy-item-btn" type="button" onclick="copyPreviousItem(${i.id})">同上次</button>
-               <input id="daily-qty-${i.id}" class="daily-qty" data-item-id="${i.id}" inputmode="numeric" type="number" min="0" step="1" placeholder="數量">
+               <button class="theory-btn" type="button"
+                 ${hasTheory ? `onclick="fillTheoryQuantity(${i.id}, ${Number(theoryQty)})"` : "disabled"}
+                 title="帶入理論數量">${hasTheory ? esc(theoryQty) : "—"}</button>
+               <input id="daily-qty-${i.id}" class="daily-qty" data-item-id="${i.id}"
+                 inputmode="numeric" type="number" min="0" step="1" placeholder="數量">
              </div>`}
       </div>`;
     }
@@ -592,6 +753,12 @@ async function loadDailyRows() {
   updateDailyProgress();
 }
 
+function fillTheoryQuantity(itemId, quantity) {
+  const input = $(`daily-qty-${itemId}`);
+  if (!input) return;
+  input.value = quantity;
+  updateDailyProgress();
+}
 function updateDailyProgress() {
   const holder = $("dailyRows");
   const countEl = $("dailyProgressCount");
@@ -615,37 +782,6 @@ function updateDailyProgress() {
 
 
 
-async function copyPreviousItem(itemId) {
-  const selectedDate = $("countDate")?.value;
-  if (!selectedDate) return toast("請先選擇清點日期");
-
-  const input = $(`daily-qty-${itemId}`);
-  if (!input) return;
-
-  const { data, error } = await sb
-    .from("inventory_records")
-    .select("record_date,quantity")
-    .eq("item_id", Number(itemId))
-    .lt("record_date", selectedDate)
-    .order("record_date", { ascending: false })
-    .limit(1);
-
-  if (error) {
-    return toast("讀取上次清點失敗：" + error.message);
-  }
-
-  const previous = data?.[0];
-
-  if (!previous || previous.quantity === null || previous.quantity === undefined) {
-    return toast("這個品項找不到上次清點數量");
-  }
-
-  input.value = previous.quantity;
-  updateDailyProgress();
-
-  toast(`已帶入 ${labelDate(previous.record_date)} 的數量`);
-}
-
 async function submitDaily() {
   const selectedDate = $("countDate").value;
   if (!selectedDate) return toast("請選擇清點日期");
@@ -667,7 +803,14 @@ async function submitDaily() {
     });
   }
 
-  if (!payload.length) return toast("請至少輸入一個品項數量");
+  const editableInputs = [...document.querySelectorAll(".daily-qty")];
+  const unfilled = editableInputs.filter(input => input.value === "");
+
+  if (unfilled.length > 0) {
+    return toast(`尚有 ${unfilled.length} 個品項未填寫`);
+  }
+
+  if (!payload.length) return toast("這一天沒有需要新增的清點資料");
 
   const { error } = await sb.from("inventory_records").insert(payload);
   if (error) {
@@ -943,9 +1086,7 @@ async function submitEditRecord(recordId) {
   closeModal(); toast("紀錄修改成功"); await loadAll(false);
 }
 
-$("historyBtn").addEventListener("click", () => { window.location.href = "history.html"; });
 $("refreshBtn").addEventListener("click", () => loadAll());
-$("todayCard").addEventListener("click", openDailyCount);
 $("lowStockCard").addEventListener("click", () => {
   lowStockOnly = !lowStockOnly;
   render();
@@ -959,10 +1100,10 @@ $("searchClearBtn").addEventListener("click", () => {
   $("searchClearBtn").style.display = "none";
   render();
 });
+$("manageBtn").addEventListener("click", openManageMenu);
+$("movementBtn").addEventListener("click", openMovementMenu);
+$("recordsBtn").addEventListener("click", openRecordsMenu);
 $("dailyBtn").addEventListener("click", openDailyCount);
-$("addCategoryBtn").addEventListener("click", openAddCategory);
-$("addItemBtn").addEventListener("click", openAddItem);
-$("sortBtn").addEventListener("click", openSortManager);
 
 loadAll();
 setInterval(() => loadAll(false), 30000);
