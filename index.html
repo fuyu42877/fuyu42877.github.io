@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#f6f7f9" />
-  <title>加工肉品庫存清點紀錄</title>
+  <title>庫存清點紀錄</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{
@@ -806,14 +806,9 @@ async function submitDaily() {
     });
   }
 
-  const editableInputs = [...document.querySelectorAll(".daily-qty")];
-  const unfilled = editableInputs.filter(input => input.value === "");
-
-  if (unfilled.length > 0) {
-    return toast(`尚有 ${unfilled.length} 個品項未填寫`);
+  if (!payload.length) {
+    return toast("請至少輸入一個品項數量");
   }
-
-  if (!payload.length) return toast("這一天沒有需要新增的清點資料");
 
   const { error } = await sb.from("inventory_records").insert(payload);
   if (error) {
@@ -824,7 +819,7 @@ async function submitDaily() {
   }
 
   closeModal();
-  toast(`已送出 ${payload.length} 個品項`);
+  toast(`已儲存 ${payload.length} 個品項，可稍後繼續清點`);
   await loadAll(false);
 }
 
