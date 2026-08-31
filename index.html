@@ -316,7 +316,10 @@ $("modalBackdrop").addEventListener("click", e => {
 });
 
 async function loadAll(showLoading = true) {
-  if (showLoading) $("content").innerHTML = '<div class="loading">正在讀取庫存資料…</div>';
+  if (showLoading) {
+    $("content").className = "loading";
+    $("content").innerHTML = "正在讀取庫存資料…";
+  }
 
   try {
     const [catRes, itemRes] = await Promise.all([
@@ -375,6 +378,7 @@ async function loadAll(showLoading = true) {
       `即時庫存 · 更新 ${new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})}`;
 
   } catch (error) {
+    $("content").className = "";
     $("content").innerHTML = `<div class="empty-state">讀取失敗：${esc(error.message)}</div>`;
   }
 }
@@ -402,6 +406,7 @@ function updateDashboard() {
   lowCard.classList.toggle("alert", lowIds.size > 0);
 }
 function render() {
+  $("content").className = "";
   const q = $("searchInput").value.trim().toLowerCase();
   const lowIds = getLatestLowStockItemIds();
   const today = localISODate();
